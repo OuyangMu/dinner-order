@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum OrderStatus {
+  SUBMITTED
+  CONFIRMED
+  CANCELED
+}
+
+enum PrepStatus {
+  TODO
+  DOING
+  DONE
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  dateTime    DateTime?
+  status      EventStatus @default(DRAFT)
+  accessCode  String      @unique
+  allowModify Boolean     @default(true)
+  showSummary Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  eventDishes EventDish[]
+  orders      Order[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  dishes    Dish[]
+}
+
+model Dish {
+  id          String      @id @default(cuid())
+  name        String
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  imageUrl    String?
+  description String?
+  tags        String      @default("[]")
+  prepItems   String      @default("[]")
+  servingHint String?
+  enabled     Boolean     @default(true)
+  stockLimit  Int?
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  eventDishes EventDish[]
+  orderItems  OrderItem[]
+
+  @@unique([name, categoryId])
+}
+
+model EventDish {
+  id         String  @id @default(cuid())
+  eventId    String
+  event      Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  dishId     String
+  dish       Dish    @relation(fields: [dishId], references: [id])
+  enabled    Boolean @default(true)
+  stockLimit Int?
+  sortOrder  Int     @default(0)
+
+  @@unique([eventId, dishId])
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  eventId    String
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guestName  String
+  guestToken String
+  note       String?
+  status     OrderStatus @default(SUBMITTED)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  items      OrderItem[]
+}
+
+model OrderItem {
+  id         String     @id @default(cuid())
+  orderId    String
+  order      Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  dishId     String
+  dish       Dish       @relation(fields: [dishId], references: [id])
+  quantity   Int
+  note       String?
+  prepStatus PrepStatus @default(TODO)
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}

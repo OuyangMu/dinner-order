@@ -1,0 +1,41 @@
+:root {
+  color: #1f2933;
+  background: #f6f7f9;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e8f4ed;
+  color: #23724a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.muted {
+  color: #6b7280;
+}
