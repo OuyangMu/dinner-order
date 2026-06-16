@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ShoppingCart, ClipboardList } from "lucide-vue-next";
+import { ShoppingCart, ClipboardList, ChevronRight } from "lucide-vue-next";
 import { showFailToast, showImagePreview, showSuccessToast } from "vant";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -79,28 +79,28 @@ function burstConfetti(event: MouseEvent) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const originX = rect.left + rect.width / 2;
   const originY = rect.top + rect.height / 2;
-  const colors = ["#43e8ff", "#9d5cff", "#ff4ade", "#f8fbff", "#7cffc4"];
+  const colors = ["#dbeafe", "#c4b5fd", "#bfdbfe", "#f8fafc", "#cbd5e1"];
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < 10; index += 1) {
     const piece = document.createElement("span");
     const angle = Math.random() * Math.PI * 2;
-    const distance = 18 + Math.random() * 28;
+    const distance = 14 + Math.random() * 22;
     const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance - 8;
-    const size = 4 + Math.random() * 4;
+    const y = Math.sin(angle) * distance - 6;
+    const size = 3 + Math.random() * 3;
 
     piece.className = "confetti-piece";
     piece.style.left = `${originX}px`;
     piece.style.top = `${originY}px`;
     piece.style.width = `${size}px`;
-    piece.style.height = `${size * 1.6}px`;
+    piece.style.height = `${size * 1.5}px`;
     piece.style.background = colors[index % colors.length];
     piece.style.setProperty("--x", `${x}px`);
     piece.style.setProperty("--y", `${y}px`);
-    piece.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
+    piece.style.setProperty("--r", `${Math.random() * 160 - 80}deg`);
 
     document.body.appendChild(piece);
-    window.setTimeout(() => piece.remove(), 720);
+    window.setTimeout(() => piece.remove(), 620);
   }
 }
 
@@ -136,7 +136,7 @@ function scrollToCategory(categoryId: string) {
   element.scrollIntoView({ behavior: "smooth", block: "start" });
   scrollLockTimer = window.setTimeout(() => {
     scrollLockTimer = undefined;
-  }, 550);
+  }, 420);
 }
 
 function syncActiveCategoryOnScroll() {
@@ -148,9 +148,9 @@ function syncActiveCategoryOnScroll() {
     }))
     .filter((item) => Number.isFinite(item.top));
 
-  const current = anchors
-    .filter((item) => item.top <= 110)
-    .sort((a, b) => b.top - a.top)[0] || anchors.sort((a, b) => a.top - b.top)[0];
+  const current =
+    anchors.filter((item) => item.top <= 130).sort((a, b) => b.top - a.top)[0] ||
+    anchors.sort((a, b) => a.top - b.top)[0];
 
   if (current) activeCategory.value = current.id;
 }
@@ -264,9 +264,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="guest-shell" v-if="!loading && menu">
+  <main v-if="!loading && menu" class="guest-shell">
     <section class="event-head">
-      <div>
+      <div class="hero-copy">
         <p class="eyebrow">小欧饭堂</p>
         <h1>{{ menu.event.title }}</h1>
         <p class="muted">{{ menu.event.description || "选好想吃的，主人会在后台汇总备菜。" }}</p>
@@ -274,110 +274,138 @@ onBeforeUnmount(() => {
       <span class="status-pill">{{ menu.event.status === "OPEN" ? "开放点菜" : "已关闭" }}</span>
     </section>
 
-    <div class="menu-layout">
-      <aside class="category-rail">
+    <div class="content-layout">
+      <aside class="category-rail" aria-label="菜品分类">
         <button
           v-for="group in groupedDishes"
           :key="group.category.id"
           :class="{ active: activeCategory === group.category.id }"
           @click="scrollToCategory(group.category.id)"
         >
-          {{ group.category.name }}
+          <span>{{ group.category.name }}</span>
         </button>
       </aside>
 
-      <section class="dish-list">
-        <template v-for="group in groupedDishes" :key="group.category.id">
-          <h2 :id="categoryAnchorId(group.category.id)" class="category-anchor">{{ group.category.name }}</h2>
-          <article v-for="dish in group.dishes" :key="dish.id" class="dish-row">
-            <img
-              :src="dish.imageUrl || '/placeholder-dish.jpg'"
-              :alt="dish.name"
-              :class="{ previewable: dish.imageUrl }"
-              @click="previewDishImage(dish)"
-            />
-            <div class="dish-info">
-              <div class="dish-title">
-                <h3 :class="{ previewable: dish.imageUrl }" @click="previewDishImage(dish)">{{ dish.name }}</h3>
-                <span v-if="dish.servingHint">{{ dish.servingHint }}</span>
+      <div class="content-main">
+        <section class="dish-list">
+          <template v-for="group in groupedDishes" :key="group.category.id">
+            <h2 :id="categoryAnchorId(group.category.id)" class="category-anchor">{{ group.category.name }}</h2>
+            <article v-for="dish in group.dishes" :key="dish.id" class="dish-row">
+              <button
+                v-if="dish.imageUrl"
+                type="button"
+                class="dish-image image-button"
+                :aria-label="`查看${dish.name}大图`"
+                @click="previewDishImage(dish)"
+              >
+                <img :src="dish.imageUrl" :alt="dish.name" />
+              </button>
+              <div v-else class="dish-image dish-image-placeholder" aria-hidden="true"></div>
+
+              <div class="dish-info">
+                <div class="dish-title">
+                  <button
+                    v-if="dish.imageUrl"
+                    type="button"
+                    class="dish-name preview-link"
+                    @click="previewDishImage(dish)"
+                  >
+                    {{ dish.name }}
+                  </button>
+                  <h3 v-else class="dish-name">{{ dish.name }}</h3>
+                  <span v-if="dish.servingHint" class="serving-hint">{{ dish.servingHint }}</span>
+                </div>
+                <p class="dish-description">{{ dish.description }}</p>
+                <div v-if="dish.tags.length" class="tag-list">
+                  <span v-for="tag in dish.tags" :key="tag">{{ tag }}</span>
+                </div>
               </div>
-              <p>{{ dish.description }}</p>
-              <div class="tag-list">
-                <span v-for="tag in dish.tags" :key="tag">{{ tag }}</span>
+
+              <div class="dish-action">
+                <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
+                <div class="stepper">
+                  <button
+                    :disabled="!canDecreaseDishQuantity(cart[dish.id]?.quantity || 0)"
+                    aria-label="减少"
+                    @click="remove(dish); burstConfetti($event)"
+                  >
+                    -
+                  </button>
+                  <strong>{{ cart[dish.id]?.quantity || 0 }}</strong>
+                  <button
+                    aria-label="增加"
+                    :disabled="(!isUnlimitedQuantityDish(dish) && Boolean(orderedByDish[dish.id])) || (!isUnlimitedQuantityDish(dish) && (cart[dish.id]?.quantity || 0) >= 1)"
+                    @click="add(dish); burstConfetti($event)"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </article>
+          </template>
+        </section>
+
+        <section v-if="summary.length" class="summary-band">
+          <div class="band-title">
+            <ClipboardList :size="18" />
+            <h2>大家已点</h2>
+          </div>
+          <div class="summary-list">
+            <div v-for="item in summary" :key="item.dish.id" class="summary-row">
+              <div class="summary-main">
+                <strong>{{ item.dish.name }}</strong>
+                <span>x{{ item.quantity }}</span>
+              </div>
+              <div class="guest-list">
+                <span v-for="guest in item.guests" :key="guest">{{ guest }}</span>
               </div>
             </div>
-            <div class="dish-action">
-              <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
-              <div class="stepper">
-                <button :disabled="!canDecreaseDishQuantity(cart[dish.id]?.quantity || 0)" aria-label="减少" @click="remove(dish); burstConfetti($event)">-</button>
-                <strong>{{ cart[dish.id]?.quantity || 0 }}</strong>
-                <button
-                  aria-label="增加"
-                  :disabled="(!isUnlimitedQuantityDish(dish) && Boolean(orderedByDish[dish.id])) || (!isUnlimitedQuantityDish(dish) && (cart[dish.id]?.quantity || 0) >= 1)"
-                  @click="add(dish); burstConfetti($event)"
-                >
-                  +
-                </button>
+          </div>
+        </section>
+
+        <section v-if="myOrders.length" class="summary-band my-orders-band">
+          <div class="band-title">
+            <ShoppingCart :size="18" />
+            <h2>我的订单</h2>
+          </div>
+          <div class="summary-list">
+            <article v-for="order in myOrders" :key="order.id" class="summary-row my-order-row">
+              <div class="summary-main">
+                <strong>{{ order.guestName }}</strong>
+                <span>{{ new Date(order.createdAt).toLocaleString() }}</span>
               </div>
-            </div>
-          </article>
-        </template>
-      </section>
+              <div class="my-order-items">
+                <span v-for="item in order.items" :key="item.id">{{ item.dish.name }} x{{ item.quantity }}</span>
+              </div>
+              <p v-if="order.note" class="my-order-note">整单备注：{{ order.note }}</p>
+              <button
+                v-if="menu.event.allowModify && menu.event.status === 'OPEN'"
+                class="delete-order-btn"
+                :disabled="deletingOrderId === order.id"
+                @click="deleteOwnOrder(order)"
+              >
+                {{ deletingOrderId === order.id ? "撤回中..." : "撤回整单" }}
+              </button>
+            </article>
+          </div>
+        </section>
+      </div>
     </div>
 
-    <section class="summary-band" v-if="summary.length">
-      <div class="band-title">
-        <ClipboardList :size="18" />
-        <h2>大家已点</h2>
-      </div>
-      <div class="summary-list">
-        <div v-for="item in summary" :key="item.dish.id" class="summary-row">
-          <div class="summary-main">
-            <strong>{{ item.dish.name }}</strong>
-            <span>x{{ item.quantity }}</span>
-          </div>
-          <div class="guest-list">
-            <span v-for="guest in item.guests" :key="guest">{{ guest }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="summary-band my-orders-band" v-if="myOrders.length">
-      <div class="band-title">
-        <ShoppingCart :size="18" />
-        <h2>我的订单</h2>
-      </div>
-      <div class="summary-list">
-        <article v-for="order in myOrders" :key="order.id" class="summary-row my-order-row">
-          <div class="summary-main">
-            <strong>{{ order.guestName }}</strong>
-            <span>{{ new Date(order.createdAt).toLocaleString() }}</span>
-          </div>
-          <div class="my-order-items">
-            <span v-for="item in order.items" :key="item.id">{{ item.dish.name }} x{{ item.quantity }}</span>
-          </div>
-          <p v-if="order.note" class="my-order-note">整单备注：{{ order.note }}</p>
-          <button
-            v-if="menu.event.allowModify && menu.event.status === 'OPEN'"
-            class="delete-order-btn"
-            :disabled="deletingOrderId === order.id"
-            @click="deleteOwnOrder(order)"
-          >
-            {{ deletingOrderId === order.id ? "撤回中..." : "撤回整单" }}
-          </button>
-        </article>
-      </div>
-    </section>
-
     <button class="cart-fab" @click="showCart = true">
-      <ShoppingCart :size="20" />
-      <span>点菜单 {{ cartCount }}</span>
+      <span class="cart-fab-meta">已选 {{ cartCount }} 件</span>
+      <span class="cart-fab-action">
+        去结算
+        <ChevronRight :size="16" />
+      </span>
     </button>
 
     <van-popup v-model:show="showCart" position="bottom" round>
       <section class="cart-panel">
-        <h2>确认点菜</h2>
+        <div class="cart-panel-head">
+          <h2>确认点菜</h2>
+          <span>{{ cartCount }} 件</span>
+        </div>
         <div v-if="!cartItems.length" class="empty">还没有选择菜品</div>
         <div v-for="item in cartItems" :key="item.dish.id" class="cart-item">
           <div class="cart-item-main">
@@ -407,80 +435,97 @@ onBeforeUnmount(() => {
           />
           <van-field v-model="note" class="cart-field" label="整单备注" placeholder="例如：整体少辣、饮料要冰" />
         </div>
-        <van-button block class="submit-order-btn" :loading="submitting" :disabled="!canSubmit" @click="submitOrder">提交点菜</van-button>
+        <van-button block class="submit-order-btn" :loading="submitting" :disabled="!canSubmit" @click="submitOrder">
+          提交点菜
+        </van-button>
       </section>
     </van-popup>
   </main>
 
   <div v-else class="loading-page">正在加载菜单...</div>
 </template>
+
 <style scoped>
+:global(:root) {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+}
+
 .guest-shell {
+  --glass-bg: rgb(255 255 255 / 6%);
+  --glass-border: rgb(255 255 255 / 8%);
+  --text-main: rgb(255 255 255 / 94%);
+  --text-subtle: rgb(255 255 255 / 58%);
+  --text-soft: rgb(255 255 255 / 42%);
+  --indicator: #60a5fa;
+  --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
   min-height: 100vh;
-  padding: 18px 16px 92px;
-  background:
-    radial-gradient(circle at 12% 8%, rgb(33 214 255 / 18%), transparent 28%),
-    radial-gradient(circle at 88% 20%, rgb(255 74 222 / 14%), transparent 26%),
-    linear-gradient(135deg, #07111f 0%, #101827 48%, #07111f 100%);
-  color: #e5f7ff;
+  padding: 24px 18px 124px;
+  background: radial-gradient(circle at top, #111827, #0b0f14 60%);
+  color: var(--text-main);
 }
 
 .guest-shell :deep(.muted) {
-  color: #9bb8c8;
+  color: var(--text-subtle);
+}
+
+.guest-shell :deep(.van-overlay) {
+  backdrop-filter: blur(8px);
+}
+
+.guest-shell :deep(.van-popup) {
+  background: transparent;
 }
 
 .guest-shell :deep(.van-cell) {
-  background: rgb(255 255 255 / 6%);
-  color: #e5f7ff;
+  background: rgb(255 255 255 / 4%);
+  color: var(--text-main);
 }
 
 .guest-shell :deep(.van-field__label),
 .guest-shell :deep(.van-field__control),
 .guest-shell :deep(.van-field__control::placeholder) {
-  color: #b7d8e8;
+  color: var(--text-subtle);
 }
 
 .guest-shell :deep(.van-field__control) {
   font-size: 16px;
 }
 
-.guest-shell :deep(.van-field__label) {
-  font-size: 14px;
-}
-
 .guest-shell :deep(.van-cell::after) {
   border-color: transparent;
 }
 
-.guest-shell :deep(.status-pill) {
-  background: rgb(67 232 255 / 12%);
-  color: #43e8ff;
-  box-shadow: inset 0 0 0 1px rgb(67 232 255 / 12%);
+.event-head,
+.dish-row,
+.summary-band,
+.cart-panel {
+  background: rgb(255 255 255 / 6%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 8%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
 }
 
 .event-head {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   align-items: flex-start;
-  margin: 0 auto 14px;
-  max-width: 980px;
-  padding: 18px;
-  border: 0;
-  border-left: 3px solid #43e8ff;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgb(67 232 255 / 14%), transparent 34%),
-    linear-gradient(180deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
-  box-shadow: 0 18px 48px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 10%);
-  backdrop-filter: blur(10px);
+  max-width: 1100px;
+  margin: 0 auto 20px;
+  padding: 22px 22px 20px;
+  border-radius: 24px;
+}
+
+.hero-copy {
+  min-width: 0;
 }
 
 .eyebrow {
-  margin: 0 0 8px;
-  color: #43e8ff;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0 0 10px;
+  color: rgb(255 255 255 / 46%);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -492,372 +537,453 @@ p {
 }
 
 h1 {
-  font-size: 28px;
-  line-height: 1.2;
-  color: #f8fbff;
-  text-shadow: 0 0 18px rgb(67 232 255 / 34%);
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: 0;
 }
 
-.menu-layout,
-.summary-band {
-  max-width: 980px;
-  margin: 0 auto 14px;
+.event-head .muted {
+  margin-top: 10px;
+  max-width: 34rem;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-.menu-layout {
+.status-pill {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: rgb(255 255 255 / 72%);
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 7%);
+}
+
+.content-layout {
+  max-width: 1100px;
+  margin: 0 auto 18px;
+}
+
+.content-layout {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 12px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.content-main {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
 }
 
 .category-rail {
   position: sticky;
-  top: 10px;
+  top: 18px;
   align-self: start;
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 4%);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgb(255 255 255 / 6%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  z-index: 40;
+  isolation: isolate;
 }
 
 .category-rail button {
-  min-height: 42px;
+  position: relative;
+  min-height: 36px;
+  padding: 0 12px 0 16px;
   border: 0;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 7%);
-  color: #b7d8e8;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  background: transparent;
+  color: rgb(255 255 255 / 60%);
+  text-align: left;
+  opacity: 0.6;
+  transition: all 0.2s var(--ease-apple);
+}
+
+.category-rail button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  border-radius: 999px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: all 0.2s var(--ease-apple);
+}
+
+.category-rail button:hover {
+  opacity: 0.86;
+  color: rgb(255 255 255 / 84%);
 }
 
 .category-rail button.active {
-  background: linear-gradient(135deg, rgb(26 214 255 / 34%), rgb(157 92 255 / 28%));
-  color: #f8fbff;
-  font-weight: 700;
-  box-shadow: 0 0 18px rgb(67 232 255 / 22%), inset 0 0 0 1px rgb(67 232 255 / 18%);
+  opacity: 1;
+  color: #fff;
+  font-weight: 500;
+  background: rgb(255 255 255 / 6%);
+  border-radius: 12px;
+}
+
+.category-rail button.active::before {
+  width: 3px;
+  height: 18px;
+  background: linear-gradient(180deg, rgb(147 197 253 / 88%), rgb(96 165 250 / 56%));
+  box-shadow: 0 0 10px rgb(96 165 250 / 22%);
 }
 
 .dish-list {
   display: grid;
-  gap: 12px;
-}
-
-.dish-list h2 {
-  padding: 14px 2px 2px;
-  font-size: 18px;
-  color: #f8fbff;
-  position: relative;
-}
-
-.dish-list h2::after {
-  content: "";
-  display: block;
-  width: 42px;
-  height: 2px;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #43e8ff, transparent);
+  gap: 14px;
 }
 
 .category-anchor {
-  scroll-margin-top: 12px;
+  padding: 8px 0 2px;
+  color: rgb(255 255 255 / 90%);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  scroll-margin-top: 20px;
 }
 
 .dish-row {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 124px;
-  gap: 12px;
+  grid-template-columns: 92px minmax(0, 1fr) 116px;
+  gap: 16px;
   align-items: center;
-  min-height: 112px;
-  padding: 11px;
-  border: 0;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%)),
-    rgb(11 22 38 / 84%);
-  box-shadow: 0 14px 34px rgb(0 0 0 / 22%), inset 0 1px 0 rgb(255 255 255 / 7%);
+  min-height: 120px;
+  padding: 14px;
+  border-radius: 16px;
+  transition: all 0.2s var(--ease-apple);
 }
 
-.dish-row img {
-  width: 84px;
-  height: 84px;
-  border-radius: 8px;
+.dish-row:hover {
+  transform: translateY(-1px);
+  background: rgb(255 255 255 / 7%);
+}
+
+.dish-image {
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #1e293b, #334155);
+}
+
+.dish-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  background: #122033;
-  border: 0;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 10%), 0 10px 20px rgb(0 0 0 / 24%);
 }
 
-.previewable {
+.image-button {
   cursor: pointer;
+  transition: transform 0.2s var(--ease-apple), opacity 0.2s var(--ease-apple);
 }
 
-.dish-row img.previewable {
-  transition: transform 0.18s ease, filter 0.18s ease;
-}
-
-.dish-row img.previewable:active {
+.image-button:active {
   transform: scale(0.98);
-  filter: brightness(0.95);
+}
+
+.dish-image-placeholder {
+  position: relative;
+}
+
+.dish-image-placeholder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 6%), transparent),
+    linear-gradient(135deg, rgb(255 255 255 / 6%), transparent 55%);
+}
+
+.dish-info {
+  min-width: 0;
 }
 
 .dish-title {
   display: flex;
-  gap: 8px;
   align-items: baseline;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.dish-title h3 {
-  font-size: 16px;
-  color: #f8fbff;
+.dish-name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: rgb(255 255 255 / 92%);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  letter-spacing: 0;
 }
 
-.dish-title span,
-.tag-list span {
-  color: #9bb8c8;
+.preview-link {
+  cursor: pointer;
+}
+
+.serving-hint {
+  color: var(--text-soft);
   font-size: 12px;
 }
 
-.dish-info p {
-  margin-top: 6px;
-  color: #a8c5d4;
+.dish-description {
+  margin-top: 8px;
+  color: var(--text-subtle);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 .tag-list {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .tag-list span {
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgb(67 232 255 / 10%);
-  border: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 8%);
+  color: rgb(255 255 255 / 65%);
+  font-size: 11px;
 }
 
 .dish-action {
   display: grid;
   justify-items: end;
-  gap: 7px;
+  gap: 10px;
 }
 
 .ordered-badge {
-  max-width: 116px;
+  max-width: 110px;
   padding: 4px 8px;
-  border: 0;
   border-radius: 999px;
-  color: #ffe7fb;
-  font-size: 12px;
-  line-height: 1.25;
+  background: rgb(255 255 255 / 7%);
+  color: rgb(255 255 255 / 60%);
+  font-size: 11px;
+  line-height: 1.35;
   text-align: center;
-  background: linear-gradient(135deg, rgb(255 74 222 / 18%), rgb(67 232 255 / 12%));
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%), 0 0 16px rgb(255 74 222 / 16%);
   overflow-wrap: anywhere;
 }
 
 .stepper {
   display: grid;
-  grid-template-columns: 28px 30px 28px;
+  grid-template-columns: 32px 34px 32px;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 }
 
 .stepper button {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #43e8ff, #9d5cff);
-  color: #07111f;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  color: rgb(255 255 255 / 76%);
   font-size: 18px;
   line-height: 1;
-  box-shadow: 0 0 16px rgb(67 232 255 / 28%);
   cursor: pointer;
-  transform: translateZ(0);
-  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  transition: all 0.2s var(--ease-apple);
 }
 
 .stepper button:hover {
-  box-shadow: 0 0 22px rgb(67 232 255 / 42%), 0 0 30px rgb(157 92 255 / 24%);
-  filter: brightness(1.08);
-}
-
-.stepper button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-  filter: grayscale(0.55);
-  box-shadow: none;
-}
-
-.stepper button:disabled:hover {
-  box-shadow: none;
-  filter: grayscale(0.55);
+  background: rgb(255 255 255 / 15%);
+  transform: scale(1.05);
 }
 
 .stepper button:active {
-  transform: scale(0.86);
-  box-shadow: 0 0 10px rgb(67 232 255 / 34%);
+  transform: scale(0.98);
+}
+
+.stepper button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .stepper strong {
   text-align: center;
-  color: #f8fbff;
-  transition: transform 0.16s ease, color 0.16s ease;
-}
-
-.stepper:active strong {
-  color: #43e8ff;
-  transform: scale(1.12);
-}
-
-@media (hover: none) {
-  .stepper button:hover {
-    box-shadow: 0 0 16px rgb(67 232 255 / 28%);
-    filter: none;
-  }
+  color: rgb(255 255 255 / 86%);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .summary-band {
-  padding: 16px;
-  border: 0;
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgb(157 92 255 / 12%), transparent),
-    rgb(7 17 31 / 70%);
-  box-shadow: 0 16px 38px rgb(0 0 0 / 24%);
-}
-
-.my-orders-band {
-  background:
-    linear-gradient(180deg, rgb(67 232 255 / 10%), transparent),
-    rgb(7 17 31 / 70%);
+  padding: 18px;
+  border-radius: 20px;
 }
 
 .band-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  color: rgb(255 255 255 / 84%);
+}
+
+.band-title h2 {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .summary-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .summary-row {
   display: grid;
   gap: 8px;
-  padding: 10px;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 6%);
+  padding: 12px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+}
+
+.summary-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .summary-main {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-}
-
-.guest-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.guest-list span {
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgb(67 232 255 / 10%);
-  color: #b7d8e8;
-  font-size: 12px;
-}
-
-.my-order-row {
   gap: 10px;
 }
 
+.summary-main strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.summary-main span,
+.my-order-note {
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+.guest-list,
 .my-order-items {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
+.guest-list span,
 .my-order-items span {
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 8%);
-  color: #d8f4ff;
-  font-size: 12px;
-}
-
-.my-order-note {
-  color: #9bb8c8;
-  font-size: 13px;
-  line-height: 1.45;
+  background: rgb(255 255 255 / 6%);
+  color: rgb(255 255 255 / 66%);
+  font-size: 11px;
 }
 
 .delete-order-btn {
   justify-self: start;
-  min-height: 36px;
-  padding: 0 14px;
-  border: 0;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgb(255 74 222 / 88%), rgb(157 92 255 / 92%));
-  color: #f8fbff;
-  font-weight: 700;
-  box-shadow: 0 12px 28px rgb(255 74 222 / 16%);
+  background: rgb(255 255 255 / 7%);
+  color: rgb(255 255 255 / 76%);
+  transition: all 0.2s var(--ease-apple);
+}
+
+.delete-order-btn:hover {
+  background: rgb(255 255 255 / 13%);
 }
 
 .delete-order-btn:disabled {
-  opacity: 0.5;
-  box-shadow: none;
+  opacity: 0.45;
 }
 
 .cart-fab {
   position: fixed;
-  right: 16px;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92%, 760px);
+  min-height: 62px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 16px;
+  background: rgb(20 20 20 / 60%);
+  backdrop-filter: blur(20px);
+  color: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+  transition: all 0.2s var(--ease-apple);
+}
+
+.cart-fab:hover {
+  transform: translateX(-50%) scale(1.01);
+}
+
+.cart-fab:active {
+  transform: translateX(-50%) scale(0.99);
+}
+
+.cart-fab-meta {
+  color: rgb(255 255 255 / 62%);
+  font-size: 14px;
+}
+
+.cart-fab-action {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #43e8ff, #9d5cff);
-  color: #07111f;
-  font-weight: 800;
-  box-shadow: 0 12px 32px rgb(67 232 255 / 26%);
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .cart-panel {
-  padding: 20px 16px calc(26px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 20% 0%, rgb(67 232 255 / 12%), transparent 32%),
-    linear-gradient(180deg, #0b1626, #08111f);
-  color: #e5f7ff;
+  padding: 22px 16px calc(28px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
 }
 
-.cart-panel h2 {
+.cart-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 14px;
-  color: #f8fbff;
-  text-shadow: 0 0 16px rgb(67 232 255 / 30%);
+}
+
+.cart-panel-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cart-panel-head span {
+  color: var(--text-subtle);
+  font-size: 13px;
 }
 
 .cart-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 14px;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%);
+  padding: 12px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+}
+
+.cart-item:last-of-type {
+  border-bottom: 0;
 }
 
 .cart-item-main {
@@ -868,67 +994,63 @@ h1 {
 
 .cart-item-title {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  align-items: center;
 }
 
 .cart-item-title strong {
-  color: #f8fbff;
   font-size: 16px;
+  font-weight: 600;
 }
 
 .cart-item-title span {
-  flex: 0 0 auto;
-  padding: 3px 8px;
-  border: 1px solid rgb(67 232 255 / 20%);
-  border-radius: 999px;
-  color: #43e8ff;
+  color: var(--text-subtle);
   font-size: 12px;
 }
 
 .cart-item-title .ordered-badge {
-  max-width: 128px;
-  border: 0;
-  color: #ffe7fb;
+  color: rgb(255 255 255 / 64%);
 }
 
 .cart-field {
   overflow: hidden;
-  border: 0;
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 4%);
 }
 
 .order-fields {
   display: grid;
-  gap: 10px;
-  margin: 14px 0;
+  gap: 12px;
+  margin: 18px 0 0;
 }
 
 .submit-order-btn {
-  height: 46px;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #43e8ff, #9d5cff);
-  color: #07111f;
-  font-weight: 800;
-  letter-spacing: 0;
-  box-shadow: 0 12px 30px rgb(67 232 255 / 24%);
+  height: 48px;
+  margin-top: 16px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 88%);
+  font-weight: 600;
+  transition: all 0.2s var(--ease-apple);
 }
 
 .submit-order-btn::before {
   display: none;
 }
 
+.submit-order-btn:hover {
+  background: rgb(255 255 255 / 15%);
+}
+
 .submit-order-btn.van-button--disabled {
-  opacity: 0.45;
-  filter: grayscale(0.45);
-  box-shadow: none;
+  opacity: 0.42;
 }
 
 .submit-order-btn :deep(.van-button__text) {
-  color: #07111f;
+  color: rgb(255 255 255 / 88%);
 }
 
 .compact {
@@ -937,78 +1059,85 @@ h1 {
 
 .empty,
 .loading-page {
-  padding: 40px 20px;
-  color: #6b7280;
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  color: var(--text-soft);
   text-align: center;
 }
 
-@media (max-width: 560px) {
-  .guest-shell {
-    padding: 14px 10px calc(96px + env(safe-area-inset-bottom));
+.loading-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #111827, #0b0f14 60%);
+}
+
+:global(.confetti-piece) {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 999px;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0) rotate(0deg);
+  animation: confetti-burst 620ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes confetti-burst {
+  to {
+    opacity: 0;
+    transform: translate3d(var(--x), var(--y), 0) rotate(var(--r));
+  }
+}
+
+@media (max-width: 900px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
-  .event-head {
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-
-  h1 {
-    font-size: 24px;
-  }
-
-  .eyebrow {
-    font-size: 12px;
-  }
-
-  .menu-layout {
-    grid-template-columns: 82px minmax(0, 1fr);
-    gap: 8px;
+  .category-rail {
+    position: sticky;
+    top: 10px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 8px 10px;
+    background:
+      linear-gradient(180deg, rgb(11 15 20 / 94%), rgb(11 15 20 / 72%));
+    z-index: 40;
   }
 
   .category-rail button {
-    min-height: 44px;
-    padding: 0 6px;
-    font-size: 14px;
+    flex: 0 0 auto;
+    padding: 0 14px 0 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .guest-shell {
+    padding: 16px 14px 120px;
   }
 
-  .dish-list h2 {
-    font-size: 17px;
+  .event-head {
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 20px;
   }
 
   .dish-row {
-    grid-template-columns: 78px minmax(0, 1fr);
-    gap: 10px;
-    padding: 10px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: start;
   }
 
-  .dish-row img {
-    width: 78px;
-    height: 78px;
-  }
-
-  .dish-title h3 {
-    font-size: 16px;
-    line-height: 1.25;
-  }
-
-  .dish-info p {
-    font-size: 13px;
+  .dish-image {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
   }
 
   .dish-action {
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  .ordered-badge {
-    max-width: min(150px, 44vw);
-  }
-
-  .cart-fab {
-    right: 12px;
-    min-height: 50px;
-    padding: 0 18px;
-    font-size: 15px;
+    grid-column: 1 / -1;
+    justify-items: end;
+    width: 100%;
+    margin-top: 2px;
   }
 
   .cart-item {
@@ -1016,64 +1145,19 @@ h1 {
   }
 
   .compact {
-    justify-self: end;
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dish-row,
+  .category-rail button,
+  .cart-fab,
+  .stepper button,
+  .submit-order-btn,
+  .delete-order-btn,
+  .image-button {
+    transition: none;
   }
 }
 </style>
-
-<style>
-html {
-  scrollbar-width: thin;
-  scrollbar-color: #43e8ff #07111f;
-}
-
-html::-webkit-scrollbar,
-.cart-panel::-webkit-scrollbar {
-  width: 10px;
-}
-
-html::-webkit-scrollbar-track,
-.cart-panel::-webkit-scrollbar-track {
-  background: #07111f;
-}
-
-html::-webkit-scrollbar-thumb,
-.cart-panel::-webkit-scrollbar-thumb {
-  border: 2px solid #07111f;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #43e8ff, #9d5cff);
-  box-shadow: 0 0 12px rgb(67 232 255 / 36%);
-}
-
-html::-webkit-scrollbar-thumb:hover,
-.cart-panel::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #7cffc4, #43e8ff);
-}
-
-.confetti-piece {
-  position: fixed;
-  z-index: 4000;
-  pointer-events: none;
-  border-radius: 2px;
-  box-shadow: 0 0 10px currentColor;
-  transform: translate(-50%, -50%) rotate(0deg);
-  animation: confetti-burst 680ms cubic-bezier(0.15, 0.8, 0.25, 1) forwards;
-}
-
-@keyframes confetti-burst {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
-  }
-
-  70% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 18px)) scale(0.35) rotate(var(--r));
-  }
-}
-</style>
-

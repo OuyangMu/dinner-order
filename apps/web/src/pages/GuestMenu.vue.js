@@ -1,4 +1,4 @@
-import { ShoppingCart, ClipboardList } from "lucide-vue-next";
+import { ShoppingCart, ClipboardList, ChevronRight } from "lucide-vue-next";
 import { showFailToast, showImagePreview, showSuccessToast } from "vant";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -70,25 +70,25 @@ function burstConfetti(event) {
     const rect = event.currentTarget.getBoundingClientRect();
     const originX = rect.left + rect.width / 2;
     const originY = rect.top + rect.height / 2;
-    const colors = ["#43e8ff", "#9d5cff", "#ff4ade", "#f8fbff", "#7cffc4"];
-    for (let index = 0; index < 12; index += 1) {
+    const colors = ["#dbeafe", "#c4b5fd", "#bfdbfe", "#f8fafc", "#cbd5e1"];
+    for (let index = 0; index < 10; index += 1) {
         const piece = document.createElement("span");
         const angle = Math.random() * Math.PI * 2;
-        const distance = 18 + Math.random() * 28;
+        const distance = 14 + Math.random() * 22;
         const x = Math.cos(angle) * distance;
-        const y = Math.sin(angle) * distance - 8;
-        const size = 4 + Math.random() * 4;
+        const y = Math.sin(angle) * distance - 6;
+        const size = 3 + Math.random() * 3;
         piece.className = "confetti-piece";
         piece.style.left = `${originX}px`;
         piece.style.top = `${originY}px`;
         piece.style.width = `${size}px`;
-        piece.style.height = `${size * 1.6}px`;
+        piece.style.height = `${size * 1.5}px`;
         piece.style.background = colors[index % colors.length];
         piece.style.setProperty("--x", `${x}px`);
         piece.style.setProperty("--y", `${y}px`);
-        piece.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
+        piece.style.setProperty("--r", `${Math.random() * 160 - 80}deg`);
         document.body.appendChild(piece);
-        window.setTimeout(() => piece.remove(), 720);
+        window.setTimeout(() => piece.remove(), 620);
     }
 }
 function lockPageScroll() {
@@ -120,7 +120,7 @@ function scrollToCategory(categoryId) {
     element.scrollIntoView({ behavior: "smooth", block: "start" });
     scrollLockTimer = window.setTimeout(() => {
         scrollLockTimer = undefined;
-    }, 550);
+    }, 420);
 }
 function syncActiveCategoryOnScroll() {
     if (scrollLockTimer || !menu.value?.categories.length)
@@ -131,9 +131,8 @@ function syncActiveCategoryOnScroll() {
         top: document.getElementById(categoryAnchorId(category.id))?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
     }))
         .filter((item) => Number.isFinite(item.top));
-    const current = anchors
-        .filter((item) => item.top <= 110)
-        .sort((a, b) => b.top - a.top)[0] || anchors.sort((a, b) => a.top - b.top)[0];
+    const current = anchors.filter((item) => item.top <= 130).sort((a, b) => b.top - a.top)[0] ||
+        anchors.sort((a, b) => a.top - b.top)[0];
     if (current)
         activeCategory.value = current.id;
 }
@@ -255,41 +254,49 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
-/** @type {__VLS_StyleScopedClasses['van-field__control']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['van-field__control']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
-/** @type {__VLS_StyleScopedClasses['van-field__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['van-field__control']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['van-cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
-/** @type {__VLS_StyleScopedClasses['menu-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['event-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['event-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['muted']} */ ;
+/** @type {__VLS_StyleScopedClasses['content-layout']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['previewable']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['previewable']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
+/** @type {__VLS_StyleScopedClasses['image-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image-placeholder']} */ ;
 /** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
-/** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
-/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
-/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
-/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
+/** @type {__VLS_StyleScopedClasses['band-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-main']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-order-items']} */ ;
 /** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-panel-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-panel-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
@@ -297,21 +304,25 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['loading-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['content-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['event-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['menu-layout']} */ ;
-/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
-/** @type {__VLS_StyleScopedClasses['dish-info']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
-/** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
-/** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['compact']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['image-button']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 if (!__VLS_ctx.loading && __VLS_ctx.menu) {
@@ -321,7 +332,9 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
         ...{ class: "event-head" },
     });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "hero-copy" },
+    });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "eyebrow" },
     });
@@ -336,10 +349,11 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     });
     (__VLS_ctx.menu.event.status === "OPEN" ? "开放点菜" : "已关闭");
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "menu-layout" },
+        ...{ class: "content-layout" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
         ...{ class: "category-rail" },
+        'aria-label': "菜品分类",
     });
     for (const [group] of __VLS_getVForSourceType((__VLS_ctx.groupedDishes))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
@@ -351,8 +365,12 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             key: (group.category.id),
             ...{ class: ({ active: __VLS_ctx.activeCategory === group.category.id }) },
         });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         (group.category.name);
     }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "content-main" },
+    });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
         ...{ class: "dish-list" },
     });
@@ -368,45 +386,76 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                 key: (dish.id),
                 ...{ class: "dish-row" },
             });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.img)({
-                ...{ onClick: (...[$event]) => {
-                        if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
-                            return;
-                        __VLS_ctx.previewDishImage(dish);
-                    } },
-                src: (dish.imageUrl || '/placeholder-dish.jpg'),
-                alt: (dish.name),
-                ...{ class: ({ previewable: dish.imageUrl }) },
-            });
+            if (dish.imageUrl) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                    ...{ onClick: (...[$event]) => {
+                            if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
+                                return;
+                            if (!(dish.imageUrl))
+                                return;
+                            __VLS_ctx.previewDishImage(dish);
+                        } },
+                    type: "button",
+                    ...{ class: "dish-image image-button" },
+                    'aria-label': (`查看${dish.name}大图`),
+                });
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.img)({
+                    src: (dish.imageUrl),
+                    alt: (dish.name),
+                });
+            }
+            else {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                    ...{ class: "dish-image dish-image-placeholder" },
+                    'aria-hidden': "true",
+                });
+            }
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "dish-info" },
             });
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "dish-title" },
             });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({
-                ...{ onClick: (...[$event]) => {
-                        if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
-                            return;
-                        __VLS_ctx.previewDishImage(dish);
-                    } },
-                ...{ class: ({ previewable: dish.imageUrl }) },
-            });
-            (dish.name);
+            if (dish.imageUrl) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                    ...{ onClick: (...[$event]) => {
+                            if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
+                                return;
+                            if (!(dish.imageUrl))
+                                return;
+                            __VLS_ctx.previewDishImage(dish);
+                        } },
+                    type: "button",
+                    ...{ class: "dish-name preview-link" },
+                });
+                (dish.name);
+            }
+            else {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({
+                    ...{ class: "dish-name" },
+                });
+                (dish.name);
+            }
             if (dish.servingHint) {
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                    ...{ class: "serving-hint" },
+                });
                 (dish.servingHint);
             }
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-            (dish.description);
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-                ...{ class: "tag-list" },
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+                ...{ class: "dish-description" },
             });
-            for (const [tag] of __VLS_getVForSourceType((dish.tags))) {
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-                    key: (tag),
+            (dish.description);
+            if (dish.tags.length) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                    ...{ class: "tag-list" },
                 });
-                (tag);
+                for (const [tag] of __VLS_getVForSourceType((dish.tags))) {
+                    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                        key: (tag),
+                    });
+                    (tag);
+                }
             }
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "dish-action" },
@@ -561,17 +610,22 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             } },
         ...{ class: "cart-fab" },
     });
-    const __VLS_8 = {}.ShoppingCart;
-    /** @type {[typeof __VLS_components.ShoppingCart, ]} */ ;
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "cart-fab-meta" },
+    });
+    (__VLS_ctx.cartCount);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "cart-fab-action" },
+    });
+    const __VLS_8 = {}.ChevronRight;
+    /** @type {[typeof __VLS_components.ChevronRight, ]} */ ;
     // @ts-ignore
     const __VLS_9 = __VLS_asFunctionalComponent(__VLS_8, new __VLS_8({
-        size: (20),
+        size: (16),
     }));
     const __VLS_10 = __VLS_9({
-        size: (20),
+        size: (16),
     }, ...__VLS_functionalComponentArgsRest(__VLS_9));
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (__VLS_ctx.cartCount);
     const __VLS_12 = {}.VanPopup;
     /** @type {[typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, ]} */ ;
     // @ts-ignore
@@ -589,7 +643,12 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
         ...{ class: "cart-panel" },
     });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "cart-panel-head" },
+    });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.cartCount);
     if (!__VLS_ctx.cartItems.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "empty" },
@@ -732,16 +791,27 @@ else {
 }
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['event-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['hero-copy']} */ ;
 /** @type {__VLS_StyleScopedClasses['eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['muted']} */ ;
 /** @type {__VLS_StyleScopedClasses['status-pill']} */ ;
-/** @type {__VLS_StyleScopedClasses['menu-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['content-layout']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['content-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-anchor']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
+/** @type {__VLS_StyleScopedClasses['image-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-image-placeholder']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-info']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-name']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-link']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-name']} */ ;
+/** @type {__VLS_StyleScopedClasses['serving-hint']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-description']} */ ;
 /** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
 /** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
@@ -763,7 +833,10 @@ else {
 /** @type {__VLS_StyleScopedClasses['my-order-note']} */ ;
 /** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab-meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab-action']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-panel-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-main']} */ ;
@@ -783,6 +856,7 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             ShoppingCart: ShoppingCart,
             ClipboardList: ClipboardList,
+            ChevronRight: ChevronRight,
             canDecreaseDishQuantity: canDecreaseDishQuantity,
             loading: loading,
             submitting: submitting,
