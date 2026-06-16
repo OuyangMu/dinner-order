@@ -619,12 +619,14 @@ onMounted(loadAdmin);
         <el-form-item label="每份备菜食材">
           <div class="prep-editor">
             <div v-for="(item, index) in dishForm.prepItems" :key="index" class="prep-row">
-              <el-input v-model="item.name" placeholder="食材" />
-              <el-input-number v-model="item.quantity" :min="0.01" :step="1" controls-position="right" />
-              <el-input v-model="item.unit" placeholder="单位" />
-              <el-button @click="removePrepItem(index)">删除</el-button>
+              <el-input v-model="item.name" class="prep-name" placeholder="食材" />
+              <div class="prep-meta">
+                <el-input-number v-model="item.quantity" class="prep-quantity" :min="0.01" :step="1" controls-position="right" />
+                <el-input v-model="item.unit" class="prep-unit" placeholder="单位" />
+              </div>
+              <el-button class="prep-remove" @click="removePrepItem(index)">删除</el-button>
             </div>
-            <el-button @click="addPrepItem">添加食材</el-button>
+            <el-button class="prep-add" @click="addPrepItem">添加食材</el-button>
           </div>
         </el-form-item>
       </el-form>
@@ -969,9 +971,38 @@ p {
 
 .prep-row {
   display: grid;
-  grid-template-columns: 1fr 130px 90px 70px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 280px) auto;
+  gap: 10px;
   align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 4%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%);
+}
+
+.prep-meta {
+  display: grid;
+  grid-template-columns: minmax(124px, 148px) minmax(88px, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.prep-quantity,
+.prep-unit,
+.prep-name {
+  min-width: 0;
+}
+
+.prep-quantity :deep(.el-input-number) {
+  width: 100%;
+}
+
+.prep-remove {
+  min-width: 72px;
+}
+
+.prep-add {
+  justify-self: start;
 }
 
 .image-editor {
@@ -1240,6 +1271,16 @@ p {
 
   .prep-row {
     grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .prep-meta {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+
+  .prep-remove,
+  .prep-add {
+    width: 100%;
   }
 
   .image-editor {

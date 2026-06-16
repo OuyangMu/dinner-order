@@ -385,6 +385,7 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['items-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['subhead']} */ ;
 /** @type {__VLS_StyleScopedClasses['subhead']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-quantity']} */ ;
 /** @type {__VLS_StyleScopedClasses['image-preview']} */ ;
 /** @type {__VLS_StyleScopedClasses['muted']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
@@ -469,6 +470,9 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['dashboard-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['copy-menu-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-remove']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-add']} */ ;
 /** @type {__VLS_StyleScopedClasses['image-editor']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
@@ -1984,23 +1988,30 @@ else {
         // @ts-ignore
         const __VLS_401 = __VLS_asFunctionalComponent(__VLS_400, new __VLS_400({
             modelValue: (item.name),
+            ...{ class: "prep-name" },
             placeholder: "食材",
         }));
         const __VLS_402 = __VLS_401({
             modelValue: (item.name),
+            ...{ class: "prep-name" },
             placeholder: "食材",
         }, ...__VLS_functionalComponentArgsRest(__VLS_401));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "prep-meta" },
+        });
         const __VLS_404 = {}.ElInputNumber;
         /** @type {[typeof __VLS_components.ElInputNumber, typeof __VLS_components.elInputNumber, ]} */ ;
         // @ts-ignore
         const __VLS_405 = __VLS_asFunctionalComponent(__VLS_404, new __VLS_404({
             modelValue: (item.quantity),
+            ...{ class: "prep-quantity" },
             min: (0.01),
             step: (1),
             controlsPosition: "right",
         }));
         const __VLS_406 = __VLS_405({
             modelValue: (item.quantity),
+            ...{ class: "prep-quantity" },
             min: (0.01),
             step: (1),
             controlsPosition: "right",
@@ -2010,10 +2021,12 @@ else {
         // @ts-ignore
         const __VLS_409 = __VLS_asFunctionalComponent(__VLS_408, new __VLS_408({
             modelValue: (item.unit),
+            ...{ class: "prep-unit" },
             placeholder: "单位",
         }));
         const __VLS_410 = __VLS_409({
             modelValue: (item.unit),
+            ...{ class: "prep-unit" },
             placeholder: "单位",
         }, ...__VLS_functionalComponentArgsRest(__VLS_409));
         const __VLS_412 = {}.ElButton;
@@ -2021,9 +2034,11 @@ else {
         // @ts-ignore
         const __VLS_413 = __VLS_asFunctionalComponent(__VLS_412, new __VLS_412({
             ...{ 'onClick': {} },
+            ...{ class: "prep-remove" },
         }));
         const __VLS_414 = __VLS_413({
             ...{ 'onClick': {} },
+            ...{ class: "prep-remove" },
         }, ...__VLS_functionalComponentArgsRest(__VLS_413));
         let __VLS_416;
         let __VLS_417;
@@ -2043,9 +2058,11 @@ else {
     // @ts-ignore
     const __VLS_421 = __VLS_asFunctionalComponent(__VLS_420, new __VLS_420({
         ...{ 'onClick': {} },
+        ...{ class: "prep-add" },
     }));
     const __VLS_422 = __VLS_421({
         ...{ 'onClick': {} },
+        ...{ class: "prep-add" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_421));
     let __VLS_424;
     let __VLS_425;
@@ -2566,6 +2583,12 @@ else {
 /** @type {__VLS_StyleScopedClasses['hidden-input']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-editor']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-name']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-quantity']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-unit']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-remove']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-add']} */ ;
 /** @type {__VLS_StyleScopedClasses['form-help']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
