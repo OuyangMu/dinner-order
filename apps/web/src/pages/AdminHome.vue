@@ -4,7 +4,8 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { request, type Category, type Dish, type EventInfo, type IngredientSummaryItem, type Order, type PrepItem, type SummaryItem } from "../api";
 
-const isAuthed = computed(() => Boolean(localStorage.getItem("adminToken")));
+const adminToken = ref(localStorage.getItem("adminToken") || "");
+const isAuthed = computed(() => Boolean(adminToken.value));
 const loginForm = reactive({ username: "admin", password: "admin123456" });
 const loginLoading = ref(false);
 const events = ref<EventInfo[]>([]);
@@ -47,6 +48,13 @@ const eventForm = reactive({
 });
 
 const activeEvent = computed(() => events.value.find((event) => event.id === activeEventId.value));
+const qrcodeOrigin = computed(() => {
+  if (import.meta.env.VITE_PUBLIC_ORIGIN) return import.meta.env.VITE_PUBLIC_ORIGIN;
+  if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+    return `${location.protocol}//192.168.3.69:${location.port || "5173"}`;
+  }
+  return location.origin;
+});
 
 async function login() {
   loginLoading.value = true;
@@ -56,6 +64,7 @@ async function login() {
       body: JSON.stringify(loginForm)
     });
     localStorage.setItem("adminToken", result.token);
+    adminToken.value = result.token;
     ElMessage.success("登录成功");
     await loadAdmin();
   } catch (error) {
@@ -84,7 +93,7 @@ async function loadEventData() {
     request<SummaryItem[]>(`/api/admin/events/${activeEventId.value}/summary`),
     request<IngredientSummaryItem[]>(`/api/admin/events/${activeEventId.value}/ingredients`),
     request<{ url: string; dataUrl: string }>(
-      `/api/admin/events/${activeEventId.value}/qrcode?origin=${encodeURIComponent(location.origin)}`
+      `/api/admin/events/${activeEventId.value}/qrcode?origin=${encodeURIComponent(qrcodeOrigin.value)}`
     )
   ]);
   activeEventDishIds.value = new Set(eventDishes.map((item) => item.dishId));
@@ -312,7 +321,7 @@ async function deleteOrder(order: Order) {
 
 function logout() {
   localStorage.removeItem("adminToken");
-  location.reload();
+  adminToken.value = "";
 }
 
 onMounted(loadAdmin);
@@ -615,15 +624,23 @@ onMounted(loadAdmin);
   min-height: 100vh;
   place-items: center;
   padding: 24px;
-  background: #f2f5f7;
+  background:
+    radial-gradient(circle at 16% 10%, rgb(67 232 255 / 18%), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgb(255 74 222 / 13%), transparent 26%),
+    linear-gradient(135deg, #07111f 0%, #101827 52%, #08111f 100%);
+  color: #e5f7ff;
 }
 
 .login-panel {
   width: min(420px, 100%);
   padding: 28px;
-  border: 1px solid #e5e7eb;
+  border: 0;
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 4%)),
+    rgb(8 17 31 / 88%);
+  box-shadow: 0 22px 70px rgb(0 0 0 / 36%), inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(12px);
 }
 
 .brand,
@@ -643,18 +660,40 @@ p {
 
 .brand {
   margin-bottom: 24px;
+  color: #f8fbff;
 }
 
 .brand h1 {
   font-size: 24px;
+  text-shadow: 0 0 18px rgb(67 232 255 / 34%);
+}
+
+.brand p {
+  margin-top: 4px;
+  color: #9bb8c8;
 }
 
 .admin-shell {
+  --el-bg-color: #0b1626;
+  --el-bg-color-overlay: #0f1c2e;
+  --el-fill-color-blank: rgb(255 255 255 / 7%);
+  --el-fill-color-light: rgb(255 255 255 / 8%);
+  --el-fill-color-lighter: rgb(255 255 255 / 5%);
+  --el-text-color-primary: #e5f7ff;
+  --el-text-color-regular: #cdefff;
+  --el-text-color-secondary: #9bb8c8;
+  --el-border-color: rgb(255 255 255 / 10%);
+  --el-border-color-light: rgb(255 255 255 / 8%);
+  --el-border-color-lighter: rgb(255 255 255 / 6%);
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   width: 100%;
   min-height: 100vh;
-  background: #f6f7f9;
+  background:
+    radial-gradient(circle at 14% 8%, rgb(67 232 255 / 14%), transparent 24%),
+    radial-gradient(circle at 92% 10%, rgb(255 74 222 / 10%), transparent 22%),
+    linear-gradient(135deg, #07111f 0%, #0f1a2b 48%, #07111f 100%);
+  color: #e5f7ff;
 }
 
 .admin-side {
@@ -663,13 +702,19 @@ p {
   align-self: start;
   min-height: 100vh;
   padding: 18px 14px;
-  border-right: 1px solid #e5e7eb;
-  background: white;
+  border-right: 1px solid rgb(67 232 255 / 12%);
+  background:
+    linear-gradient(180deg, rgb(67 232 255 / 10%), transparent 30%),
+    rgb(7 17 31 / 86%);
+  box-shadow: 12px 0 34px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(12px);
 }
 
 .side-title {
   margin-bottom: 22px;
   font-size: 18px;
+  color: #f8fbff;
+  text-shadow: 0 0 16px rgb(67 232 255 / 30%);
 }
 
 .admin-side button {
@@ -679,20 +724,29 @@ p {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #374151;
+  color: #b7d8e8;
   text-align: left;
   padding: 0 12px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.admin-side button:hover {
+  background: rgb(255 255 255 / 7%);
+  color: #f8fbff;
+  transform: translateX(2px);
 }
 
 .admin-side button.active {
-  background: #e8f4ed;
-  color: #23724a;
+  background: linear-gradient(135deg, rgb(67 232 255 / 26%), rgb(157 92 255 / 18%));
+  color: #f8fbff;
   font-weight: 700;
+  box-shadow: 0 0 18px rgb(67 232 255 / 18%), inset 0 0 0 1px rgb(67 232 255 / 18%);
 }
 
 .admin-side button.plain {
   margin-top: 18px;
-  color: #9b2c2c;
+  color: #ff9fc8;
 }
 
 .admin-main {
@@ -707,6 +761,22 @@ p {
   gap: 18px;
   align-items: center;
   margin-bottom: 18px;
+  padding: 18px;
+  border-left: 3px solid #43e8ff;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(67 232 255 / 12%), transparent 34%),
+    rgb(255 255 255 / 6%);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 24%), inset 0 1px 0 rgb(255 255 255 / 8%);
+}
+
+.admin-top h1 {
+  color: #f8fbff;
+  text-shadow: 0 0 18px rgb(67 232 255 / 28%);
+}
+
+.admin-top .muted {
+  margin-top: 6px;
 }
 
 .dashboard-grid {
@@ -719,9 +789,12 @@ p {
 .metric,
 .qr-panel,
 .tool-section {
-  border: 1px solid #e5e7eb;
+  border: 0;
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%)),
+    rgb(11 22 38 / 82%);
+  box-shadow: 0 16px 42px rgb(0 0 0 / 22%), inset 0 1px 0 rgb(255 255 255 / 8%);
 }
 
 .metric {
@@ -729,6 +802,7 @@ p {
   align-content: space-between;
   min-height: 150px;
   padding: 18px;
+  color: #b7d8e8;
 }
 
 .metric.clickable {
@@ -737,13 +811,19 @@ p {
 }
 
 .metric.clickable:hover {
-  border-color: #23724a;
-  box-shadow: 0 8px 20px rgb(31 41 51 / 10%);
+  box-shadow: 0 18px 46px rgb(67 232 255 / 16%), inset 0 0 0 1px rgb(67 232 255 / 20%);
   transform: translateY(-1px);
 }
 
 .metric strong {
   font-size: 38px;
+  color: #f8fbff;
+  text-shadow: 0 0 18px rgb(67 232 255 / 36%);
+}
+
+.metric svg,
+.band-title svg {
+  color: #43e8ff;
 }
 
 .qr-panel {
@@ -757,6 +837,8 @@ p {
 .qr-panel img {
   width: 150px;
   height: 150px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 6px rgb(255 255 255 / 8%), 0 0 28px rgb(67 232 255 / 20%);
 }
 
 .tool-section {
@@ -770,6 +852,12 @@ p {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+}
+
+.section-head h2,
+.band-title h2,
+.subhead {
+  color: #f8fbff;
 }
 
 .copy-menu-bar {
@@ -789,8 +877,8 @@ p {
 .items-text span {
   padding: 3px 8px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #374151;
+  background: rgb(67 232 255 / 10%);
+  color: #b7d8e8;
 }
 
 .subhead {
@@ -828,12 +916,13 @@ p {
   place-items: center;
   width: 128px;
   aspect-ratio: 1;
-  border: 1px solid #e5e7eb;
+  border: 0;
   border-radius: 8px;
   overflow: hidden;
-  background: #f8fafc;
-  color: #6b7280;
+  background: rgb(255 255 255 / 7%);
+  color: #9bb8c8;
   font-size: 13px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
 }
 
 .image-preview img {
@@ -854,12 +943,176 @@ p {
 .form-help {
   width: 100%;
   margin: 6px 0 0;
-  color: #6b7280;
+  color: #9bb8c8;
   font-size: 12px;
 }
 
 .el-tag {
   margin-right: 6px;
+}
+
+.muted {
+  color: #9bb8c8;
+}
+
+.admin-shell :deep(.el-button),
+.login-page :deep(.el-button) {
+  border: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 8%);
+  color: #d8f4ff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+}
+
+.admin-shell :deep(.el-button:hover),
+.login-page :deep(.el-button:hover) {
+  color: #f8fbff;
+  background: rgb(67 232 255 / 14%);
+  box-shadow: inset 0 0 0 1px rgb(67 232 255 / 24%), 0 0 18px rgb(67 232 255 / 14%);
+}
+
+.admin-shell :deep(.el-button--primary),
+.login-page :deep(.el-button--primary) {
+  background: linear-gradient(135deg, #43e8ff, #9d5cff);
+  color: #07111f;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgb(67 232 255 / 22%);
+}
+
+.admin-shell :deep(.el-button--success) {
+  background: linear-gradient(135deg, #7cffc4, #43e8ff);
+  color: #07111f;
+}
+
+.admin-shell :deep(.el-button--danger) {
+  background: linear-gradient(135deg, #ff4ade, #ff7aa8);
+  color: #07111f;
+}
+
+.admin-shell :deep(.el-button--info) {
+  background: rgb(157 92 255 / 18%);
+  color: #e6d8ff;
+}
+
+.admin-shell :deep(.el-button.is-disabled),
+.login-page :deep(.el-button.is-disabled) {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.admin-shell :deep(.el-input__wrapper),
+.admin-shell :deep(.el-textarea__inner),
+.admin-shell :deep(.el-select__wrapper),
+.login-page :deep(.el-input__wrapper) {
+  border: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 7%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+}
+
+.admin-shell :deep(.el-input__wrapper.is-focus),
+.admin-shell :deep(.el-textarea__inner:focus),
+.admin-shell :deep(.el-select__wrapper.is-focused),
+.login-page :deep(.el-input__wrapper.is-focus) {
+  box-shadow: inset 0 0 0 1px rgb(67 232 255 / 44%), 0 0 18px rgb(67 232 255 / 14%);
+}
+
+.admin-shell :deep(.el-input__inner),
+.admin-shell :deep(.el-textarea__inner),
+.admin-shell :deep(.el-select__placeholder),
+.admin-shell :deep(.el-select__selected-item),
+.login-page :deep(.el-input__inner) {
+  color: #e5f7ff;
+}
+
+.admin-shell :deep(.el-input__inner::placeholder),
+.admin-shell :deep(.el-textarea__inner::placeholder),
+.login-page :deep(.el-input__inner::placeholder) {
+  color: #799bad;
+}
+
+.admin-shell :deep(.el-form-item__label),
+.login-page :deep(.el-form-item__label) {
+  color: #b7d8e8;
+}
+
+.admin-shell :deep(.el-table) {
+  --el-bg-color: transparent;
+  --el-fill-color-blank: transparent;
+  --el-table-border-color: rgb(255 255 255 / 8%);
+  --el-table-header-bg-color: rgb(10 29 48);
+  --el-table-header-text-color: #e5f7ff;
+  --el-table-row-hover-bg-color: rgb(67 232 255 / 9%);
+  --el-table-text-color: #cdefff;
+  --el-table-tr-bg-color: rgb(11 22 38 / 68%);
+  --el-table-bg-color: rgb(11 22 38 / 68%);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(11 22 38 / 68%);
+}
+
+.admin-shell :deep(.el-table th.el-table__cell) {
+  background: rgb(10 29 48);
+}
+
+.admin-shell :deep(.el-table tr),
+.admin-shell :deep(.el-table td.el-table__cell) {
+  background: rgb(11 22 38 / 68%);
+}
+
+.admin-shell :deep(.el-table__row--striped td.el-table__cell) {
+  background: rgb(17 34 56 / 86%);
+}
+
+.admin-shell :deep(.el-table__inner-wrapper::before) {
+  background: rgb(255 255 255 / 8%);
+}
+
+.admin-shell :deep(.el-tag) {
+  border: 0;
+  background: rgb(67 232 255 / 12%);
+  color: #b7f4ff;
+}
+
+.admin-shell :deep(.el-tag--success) {
+  background: rgb(124 255 196 / 14%);
+  color: #a9ffd6;
+}
+
+.admin-shell :deep(.el-tag--info) {
+  background: rgb(157 92 255 / 14%);
+  color: #dfd0ff;
+}
+
+.admin-shell :deep(.el-dialog) {
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 20% 0%, rgb(67 232 255 / 12%), transparent 34%),
+    linear-gradient(180deg, #0b1626, #08111f);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 48%), inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.admin-shell :deep(.el-dialog__title),
+.admin-shell :deep(.el-dialog__body) {
+  color: #e5f7ff;
+}
+
+.admin-shell :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: #b7d8e8;
+}
+
+.admin-shell :deep(.el-checkbox__label) {
+  color: #b7d8e8;
+}
+
+.admin-shell :deep(.el-checkbox__inner) {
+  border-color: rgb(67 232 255 / 38%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.admin-shell :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  border-color: #43e8ff;
+  background: #43e8ff;
 }
 
 @media (max-width: 900px) {
@@ -876,7 +1129,7 @@ p {
     gap: 8px;
     overflow-x: auto;
     border-right: 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid rgb(67 232 255 / 12%);
   }
 
   .side-title {
@@ -891,10 +1144,18 @@ p {
     text-align: center;
   }
 
+  .admin-side button:hover {
+    transform: none;
+  }
+
   .admin-top,
   .qr-panel {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-main {
+    padding: 12px;
   }
 
   .dashboard-grid {
@@ -912,5 +1173,67 @@ p {
   .image-editor {
     grid-template-columns: 1fr;
   }
+}
+</style>
+
+<style>
+.el-popper.is-light,
+.el-select-dropdown,
+.el-picker__popper,
+.el-message-box,
+.el-message {
+  --el-bg-color-overlay: #0f1c2e;
+  --el-fill-color-blank: rgb(255 255 255 / 7%);
+  --el-text-color-primary: #e5f7ff;
+  --el-text-color-regular: #cdefff;
+  --el-text-color-secondary: #9bb8c8;
+  --el-border-color: rgb(255 255 255 / 10%);
+  border: 0 !important;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 4%)),
+    #0b1626 !important;
+  color: #e5f7ff !important;
+  box-shadow: 0 18px 52px rgb(0 0 0 / 42%), inset 0 1px 0 rgb(255 255 255 / 10%) !important;
+}
+
+.el-select-dropdown__item,
+.el-message-box__title,
+.el-message-box__content,
+.el-message__content {
+  color: #d8f4ff !important;
+}
+
+.el-select-dropdown__item.is-hovering,
+.el-select-dropdown__item:hover {
+  background: rgb(67 232 255 / 12%) !important;
+}
+
+.el-select-dropdown__item.is-selected {
+  color: #43e8ff !important;
+}
+
+.el-popper.is-light .el-popper__arrow::before {
+  border: 0 !important;
+  background: #0b1626 !important;
+}
+
+.el-overlay {
+  background-color: rgb(2 8 18 / 62%) !important;
+  backdrop-filter: blur(4px);
+}
+
+.el-dialog {
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 20% 0%, rgb(67 232 255 / 12%), transparent 34%),
+    linear-gradient(180deg, #0b1626, #08111f) !important;
+  color: #e5f7ff;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 48%), inset 0 1px 0 rgb(255 255 255 / 10%) !important;
+}
+
+.el-dialog__title,
+.el-dialog__body,
+.el-dialog__headerbtn .el-dialog__close {
+  color: #e5f7ff !important;
 }
 </style>

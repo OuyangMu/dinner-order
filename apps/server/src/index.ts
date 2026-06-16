@@ -48,6 +48,12 @@ const orderSchema = z.object({
     .min(1)
 });
 
+const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+
+function isUnlimitedQuantityDish(dish: { category?: { name?: string } | null }) {
+  return unlimitedQuantityCategories.has(dish.category?.name || "");
+}
+
 const dishSchema = z.object({
   name: z.string().min(1).max(80),
   categoryId: z.string().min(1),
@@ -174,6 +180,42 @@ app.post("/api/events/:code/orders", async (c) => {
   const validDishIds = new Set(menu.dishes.map((dish: any) => dish.id));
   if (body.items.some((item) => !validDishIds.has(item.dishId))) {
     return c.json({ message: "订单包含不可点菜品" }, 400);
+  }
+
+  const dishById = new Map(menu.dishes.map((dish: any) => [dish.id, dish]));
+  const invalidQuantityItem = body.items.find((item) => {
+    const dish = dishById.get(item.dishId);
+    return dish && !isUnlimitedQuantityDish(dish) && item.quantity > 1;
+  });
+  if (invalidQuantityItem) {
+    const dish: any = dishById.get(invalidQuantityItem.dishId);
+    return c.json({ message: `${dish.name}最多只能点 1 份` }, 400);
+  }
+
+  const requestedDishIds = body.items
+    .filter((item) => {
+      const dish = dishById.get(item.dishId);
+      return dish && !isUnlimitedQuantityDish(dish);
+    })
+    .map((item) => item.dishId);
+  const existingItems = await prisma.orderItem.findMany({
+    where: {
+      dishId: { in: requestedDishIds },
+      order: {
+        eventId: menu.event.id,
+        status: { not: "CANCELED" }
+      }
+    },
+    include: { dish: true, order: true }
+  });
+  if (existingItems.length) {
+    const conflicts = existingItems.map((item) => ({
+      dishId: item.dishId,
+      dishName: item.dish.name,
+      guestName: item.order.guestName
+    }));
+    const first = conflicts[0];
+    return c.json({ message: `${first.dishName}${first.guestName}已点`, conflicts }, 409);
   }
 
   const guestToken = body.guestToken || randomBytes(16).toString("hex");

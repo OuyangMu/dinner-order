@@ -1,6 +1,6 @@
 import { ShoppingCart, ClipboardList } from "lucide-vue-next";
 import { showFailToast, showImagePreview, showSuccessToast } from "vant";
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { request } from "../api";
 const route = useRoute();
@@ -16,10 +16,20 @@ const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
 let scrollLockTimer;
+let lockedScrollY = 0;
+const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+function isUnlimitedQuantityDish(dish) {
+    return unlimitedQuantityCategories.has(dish.category?.name || "");
+}
 const cartItems = computed(() => Object.values(cart).filter((item) => item.quantity > 0));
 const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 const guestNameMissing = computed(() => !guestName.value.trim());
-const canSubmit = computed(() => cartItems.value.length > 0 && !guestNameMissing.value && !submitting.value);
+const orderedByDish = computed(() => Object.fromEntries(summary.value.map((item) => [
+    item.dish.id,
+    item.guests.map((guest) => guest.replace(/\s*x\d+$/, "")).join("、")
+])));
+const hasConflictInCart = computed(() => cartItems.value.some((item) => !isUnlimitedQuantityDish(item.dish) && Boolean(orderedByDish.value[item.dish.id])));
+const canSubmit = computed(() => cartItems.value.length > 0 && !guestNameMissing.value && !submitting.value && !hasConflictInCart.value);
 const groupedDishes = computed(() => {
     if (!menu.value)
         return [];
@@ -29,7 +39,13 @@ const groupedDishes = computed(() => {
     }));
 });
 function add(dish) {
+    if (!isUnlimitedQuantityDish(dish) && orderedByDish.value[dish.id]) {
+        showFailToast(`${dish.name}${orderedByDish.value[dish.id]}已点`);
+        return;
+    }
     cart[dish.id] ??= { dish, quantity: 0, note: "" };
+    if (!isUnlimitedQuantityDish(dish) && cart[dish.id].quantity >= 1)
+        return;
     cart[dish.id].quantity += 1;
 }
 function remove(dish) {
@@ -46,6 +62,48 @@ function previewDishImage(dish) {
         images: [dish.imageUrl],
         closeable: true
     });
+}
+function burstConfetti(event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+    const colors = ["#43e8ff", "#9d5cff", "#ff4ade", "#f8fbff", "#7cffc4"];
+    for (let index = 0; index < 12; index += 1) {
+        const piece = document.createElement("span");
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 18 + Math.random() * 28;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance - 8;
+        const size = 4 + Math.random() * 4;
+        piece.className = "confetti-piece";
+        piece.style.left = `${originX}px`;
+        piece.style.top = `${originY}px`;
+        piece.style.width = `${size}px`;
+        piece.style.height = `${size * 1.6}px`;
+        piece.style.background = colors[index % colors.length];
+        piece.style.setProperty("--x", `${x}px`);
+        piece.style.setProperty("--y", `${y}px`);
+        piece.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
+        document.body.appendChild(piece);
+        window.setTimeout(() => piece.remove(), 720);
+    }
+}
+function lockPageScroll() {
+    lockedScrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${lockedScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+}
+function unlockPageScroll() {
+    const top = document.body.style.top;
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, Math.abs(Number.parseInt(top || "0", 10)) || lockedScrollY);
 }
 function categoryAnchorId(categoryId) {
     return `category-${categoryId}`;
@@ -102,6 +160,11 @@ async function submitOrder() {
         showFailToast("请先选择菜品");
         return;
     }
+    const conflictItem = cartItems.value.find((item) => !isUnlimitedQuantityDish(item.dish) && orderedByDish.value[item.dish.id]);
+    if (conflictItem) {
+        showFailToast(`${conflictItem.dish.name}${orderedByDish.value[conflictItem.dish.id]}已点`);
+        return;
+    }
     submitting.value = true;
     try {
         const order = await request(`/api/events/${code.value}/orders`, {
@@ -137,17 +200,41 @@ onMounted(() => {
     load();
     window.addEventListener("scroll", syncActiveCategoryOnScroll, { passive: true });
 });
+watch(showCart, (visible) => {
+    if (visible) {
+        lockPageScroll();
+    }
+    else {
+        unlockPageScroll();
+    }
+});
 onBeforeUnmount(() => {
     window.removeEventListener("scroll", syncActiveCategoryOnScroll);
     window.clearTimeout(scrollLockTimer);
+    if (showCart.value)
+        unlockPageScroll();
 });
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['van-field__control']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['van-field__control']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['van-field__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['van-cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['menu-layout']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
@@ -160,14 +247,37 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['event-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['menu-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['stepper']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-info']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
+/** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['compact']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 if (!__VLS_ctx.loading && __VLS_ctx.menu) {
@@ -265,6 +375,15 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                 (tag);
             }
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                ...{ class: "dish-action" },
+            });
+            if (!__VLS_ctx.isUnlimitedQuantityDish(dish) && __VLS_ctx.orderedByDish[dish.id]) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                    ...{ class: "ordered-badge" },
+                });
+                (__VLS_ctx.orderedByDish[dish.id]);
+            }
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "stepper" },
             });
             __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
@@ -272,6 +391,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                         if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
                             return;
                         __VLS_ctx.remove(dish);
+                        __VLS_ctx.burstConfetti($event);
                     } },
                 'aria-label': "减少",
             });
@@ -282,8 +402,10 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                         if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
                             return;
                         __VLS_ctx.add(dish);
+                        __VLS_ctx.burstConfetti($event);
                     } },
                 'aria-label': "增加",
+                disabled: ((!__VLS_ctx.isUnlimitedQuantityDish(dish) && Boolean(__VLS_ctx.orderedByDish[dish.id])) || (!__VLS_ctx.isUnlimitedQuantityDish(dish) && (__VLS_ctx.cart[dish.id]?.quantity || 0) >= 1)),
             });
         }
     }
@@ -377,19 +499,38 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             key: (item.dish.id),
             ...{ class: "cart-item" },
         });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "cart-item-main" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "cart-item-title" },
+        });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.dish.name);
+        if (!__VLS_ctx.isUnlimitedQuantityDish(item.dish) && __VLS_ctx.orderedByDish[item.dish.id]) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                ...{ class: "ordered-badge" },
+            });
+            (__VLS_ctx.orderedByDish[item.dish.id]);
+        }
+        else {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+            (item.quantity);
+        }
         const __VLS_12 = {}.VanField;
         /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
         // @ts-ignore
         const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
             modelValue: (item.note),
-            placeholder: "单项备注，可不填",
+            ...{ class: "cart-field" },
+            label: "单项备注",
+            placeholder: "少辣、不要香菜，可不填",
         }));
         const __VLS_14 = __VLS_13({
             modelValue: (item.note),
-            placeholder: "单项备注，可不填",
+            ...{ class: "cart-field" },
+            label: "单项备注",
+            placeholder: "少辣、不要香菜，可不填",
         }, ...__VLS_functionalComponentArgsRest(__VLS_13));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "stepper compact" },
@@ -399,6 +540,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                     if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
                         return;
                     __VLS_ctx.remove(item.dish);
+                    __VLS_ctx.burstConfetti($event);
                 } },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
@@ -408,14 +550,20 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                     if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
                         return;
                     __VLS_ctx.add(item.dish);
+                    __VLS_ctx.burstConfetti($event);
                 } },
+            disabled: ((!__VLS_ctx.isUnlimitedQuantityDish(item.dish) && Boolean(__VLS_ctx.orderedByDish[item.dish.id])) || (!__VLS_ctx.isUnlimitedQuantityDish(item.dish) && item.quantity >= 1)),
         });
     }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "order-fields" },
+    });
     const __VLS_16 = {}.VanField;
     /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
     // @ts-ignore
     const __VLS_17 = __VLS_asFunctionalComponent(__VLS_16, new __VLS_16({
         modelValue: (__VLS_ctx.guestName),
+        ...{ class: "cart-field" },
         label: "昵称",
         placeholder: "例如：小王",
         required: true,
@@ -425,6 +573,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     }));
     const __VLS_18 = __VLS_17({
         modelValue: (__VLS_ctx.guestName),
+        ...{ class: "cart-field" },
         label: "昵称",
         placeholder: "例如：小王",
         required: true,
@@ -437,13 +586,15 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     // @ts-ignore
     const __VLS_21 = __VLS_asFunctionalComponent(__VLS_20, new __VLS_20({
         modelValue: (__VLS_ctx.note),
+        ...{ class: "cart-field" },
         label: "整单备注",
-        placeholder: "例如：少辣、不要香菜",
+        placeholder: "例如：整体少辣、饮料要冰",
     }));
     const __VLS_22 = __VLS_21({
         modelValue: (__VLS_ctx.note),
+        ...{ class: "cart-field" },
         label: "整单备注",
-        placeholder: "例如：少辣、不要香菜",
+        placeholder: "例如：整体少辣、饮料要冰",
     }, ...__VLS_functionalComponentArgsRest(__VLS_21));
     const __VLS_24 = {}.VanButton;
     /** @type {[typeof __VLS_components.VanButton, typeof __VLS_components.vanButton, typeof __VLS_components.VanButton, typeof __VLS_components.vanButton, ]} */ ;
@@ -451,14 +602,14 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     const __VLS_25 = __VLS_asFunctionalComponent(__VLS_24, new __VLS_24({
         ...{ 'onClick': {} },
         block: true,
-        type: "primary",
+        ...{ class: "submit-order-btn" },
         loading: (__VLS_ctx.submitting),
         disabled: (!__VLS_ctx.canSubmit),
     }));
     const __VLS_26 = __VLS_25({
         ...{ 'onClick': {} },
         block: true,
-        type: "primary",
+        ...{ class: "submit-order-btn" },
         loading: (__VLS_ctx.submitting),
         disabled: (!__VLS_ctx.canSubmit),
     }, ...__VLS_functionalComponentArgsRest(__VLS_25));
@@ -490,6 +641,8 @@ else {
 /** @type {__VLS_StyleScopedClasses['dish-info']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
+/** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
 /** @type {__VLS_StyleScopedClasses['band-title']} */ ;
@@ -501,8 +654,16 @@ else {
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item-main']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['compact']} */ ;
+/** @type {__VLS_StyleScopedClasses['order-fields']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['cart-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['submit-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['loading-page']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -519,14 +680,17 @@ const __VLS_self = (await import('vue')).defineComponent({
             guestName: guestName,
             note: note,
             showCart: showCart,
+            isUnlimitedQuantityDish: isUnlimitedQuantityDish,
             cartItems: cartItems,
             cartCount: cartCount,
             guestNameMissing: guestNameMissing,
+            orderedByDish: orderedByDish,
             canSubmit: canSubmit,
             groupedDishes: groupedDishes,
             add: add,
             remove: remove,
             previewDishImage: previewDishImage,
+            burstConfetti: burstConfetti,
             categoryAnchorId: categoryAnchorId,
             scrollToCategory: scrollToCategory,
             submitOrder: submitOrder,

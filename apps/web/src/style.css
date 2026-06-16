@@ -24,6 +24,25 @@ textarea {
   font: inherit;
 }
 
+input,
+textarea,
+select,
+.van-field__control,
+.el-input__inner,
+.el-textarea__inner,
+.el-select__wrapper,
+.el-input-number .el-input__inner {
+  font-size: 16px;
+}
+
+.el-select__placeholder,
+.el-select__selected-item,
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder,
+.van-field__control::placeholder {
+  font-size: 16px;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

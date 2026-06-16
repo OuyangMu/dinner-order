@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ShoppingCart, ClipboardList } from "lucide-vue-next";
 import { showFailToast, showImagePreview, showSuccessToast } from "vant";
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { request, type Dish, type MenuPayload, type Order, type SummaryItem } from "../api";
 
@@ -18,11 +18,27 @@ const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
 let scrollLockTimer: number | undefined;
+let lockedScrollY = 0;
+
+const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+
+function isUnlimitedQuantityDish(dish: Dish) {
+  return unlimitedQuantityCategories.has(dish.category?.name || "");
+}
 
 const cartItems = computed(() => Object.values(cart).filter((item) => item.quantity > 0));
 const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 const guestNameMissing = computed(() => !guestName.value.trim());
-const canSubmit = computed(() => cartItems.value.length > 0 && !guestNameMissing.value && !submitting.value);
+const orderedByDish = computed<Record<string, string>>(() =>
+  Object.fromEntries(
+    summary.value.map((item) => [
+      item.dish.id,
+      item.guests.map((guest) => guest.replace(/\s*x\d+$/, "")).join("、")
+    ])
+  )
+);
+const hasConflictInCart = computed(() => cartItems.value.some((item) => !isUnlimitedQuantityDish(item.dish) && Boolean(orderedByDish.value[item.dish.id])));
+const canSubmit = computed(() => cartItems.value.length > 0 && !guestNameMissing.value && !submitting.value && !hasConflictInCart.value);
 
 const groupedDishes = computed(() => {
   if (!menu.value) return [];
@@ -33,7 +49,12 @@ const groupedDishes = computed(() => {
 });
 
 function add(dish: Dish) {
+  if (!isUnlimitedQuantityDish(dish) && orderedByDish.value[dish.id]) {
+    showFailToast(`${dish.name}${orderedByDish.value[dish.id]}已点`);
+    return;
+  }
   cart[dish.id] ??= { dish, quantity: 0, note: "" };
+  if (!isUnlimitedQuantityDish(dish) && cart[dish.id].quantity >= 1) return;
   cart[dish.id].quantity += 1;
 }
 
@@ -49,6 +70,54 @@ function previewDishImage(dish: Dish) {
     images: [dish.imageUrl],
     closeable: true
   });
+}
+
+function burstConfetti(event: MouseEvent) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const originX = rect.left + rect.width / 2;
+  const originY = rect.top + rect.height / 2;
+  const colors = ["#43e8ff", "#9d5cff", "#ff4ade", "#f8fbff", "#7cffc4"];
+
+  for (let index = 0; index < 12; index += 1) {
+    const piece = document.createElement("span");
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 18 + Math.random() * 28;
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance - 8;
+    const size = 4 + Math.random() * 4;
+
+    piece.className = "confetti-piece";
+    piece.style.left = `${originX}px`;
+    piece.style.top = `${originY}px`;
+    piece.style.width = `${size}px`;
+    piece.style.height = `${size * 1.6}px`;
+    piece.style.background = colors[index % colors.length];
+    piece.style.setProperty("--x", `${x}px`);
+    piece.style.setProperty("--y", `${y}px`);
+    piece.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
+
+    document.body.appendChild(piece);
+    window.setTimeout(() => piece.remove(), 720);
+  }
+}
+
+function lockPageScroll() {
+  lockedScrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${lockedScrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+}
+
+function unlockPageScroll() {
+  const top = document.body.style.top;
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  window.scrollTo(0, Math.abs(Number.parseInt(top || "0", 10)) || lockedScrollY);
 }
 
 function categoryAnchorId(categoryId: string) {
@@ -108,6 +177,11 @@ async function submitOrder() {
     showFailToast("请先选择菜品");
     return;
   }
+  const conflictItem = cartItems.value.find((item) => !isUnlimitedQuantityDish(item.dish) && orderedByDish.value[item.dish.id]);
+  if (conflictItem) {
+    showFailToast(`${conflictItem.dish.name}${orderedByDish.value[conflictItem.dish.id]}已点`);
+    return;
+  }
 
   submitting.value = true;
   try {
@@ -144,9 +218,18 @@ onMounted(() => {
   window.addEventListener("scroll", syncActiveCategoryOnScroll, { passive: true });
 });
 
+watch(showCart, (visible) => {
+  if (visible) {
+    lockPageScroll();
+  } else {
+    unlockPageScroll();
+  }
+});
+
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", syncActiveCategoryOnScroll);
   window.clearTimeout(scrollLockTimer);
+  if (showCart.value) unlockPageScroll();
 });
 </script>
 
@@ -193,10 +276,19 @@ onBeforeUnmount(() => {
                 <span v-for="tag in dish.tags" :key="tag">{{ tag }}</span>
               </div>
             </div>
-            <div class="stepper">
-              <button aria-label="减少" @click="remove(dish)">-</button>
-              <strong>{{ cart[dish.id]?.quantity || 0 }}</strong>
-              <button aria-label="增加" @click="add(dish)">+</button>
+            <div class="dish-action">
+              <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
+              <div class="stepper">
+                <button aria-label="减少" @click="remove(dish); burstConfetti($event)">-</button>
+                <strong>{{ cart[dish.id]?.quantity || 0 }}</strong>
+                <button
+                  aria-label="增加"
+                  :disabled="(!isUnlimitedQuantityDish(dish) && Boolean(orderedByDish[dish.id])) || (!isUnlimitedQuantityDish(dish) && (cart[dish.id]?.quantity || 0) >= 1)"
+                  @click="add(dish); burstConfetti($event)"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </article>
         </template>
@@ -231,27 +323,34 @@ onBeforeUnmount(() => {
         <h2>确认点菜</h2>
         <div v-if="!cartItems.length" class="empty">还没有选择菜品</div>
         <div v-for="item in cartItems" :key="item.dish.id" class="cart-item">
-          <div>
-            <strong>{{ item.dish.name }}</strong>
-            <van-field v-model="item.note" placeholder="单项备注，可不填" />
+          <div class="cart-item-main">
+            <div class="cart-item-title">
+              <strong>{{ item.dish.name }}</strong>
+              <span v-if="!isUnlimitedQuantityDish(item.dish) && orderedByDish[item.dish.id]" class="ordered-badge">{{ orderedByDish[item.dish.id] }}已点</span>
+              <span v-else>x{{ item.quantity }}</span>
+            </div>
+            <van-field v-model="item.note" class="cart-field" label="单项备注" placeholder="少辣、不要香菜，可不填" />
           </div>
           <div class="stepper compact">
-            <button @click="remove(item.dish)">-</button>
+            <button @click="remove(item.dish); burstConfetti($event)">-</button>
             <strong>{{ item.quantity }}</strong>
-            <button @click="add(item.dish)">+</button>
+            <button :disabled="(!isUnlimitedQuantityDish(item.dish) && Boolean(orderedByDish[item.dish.id])) || (!isUnlimitedQuantityDish(item.dish) && item.quantity >= 1)" @click="add(item.dish); burstConfetti($event)">+</button>
           </div>
         </div>
-        <van-field
-          v-model="guestName"
-          label="昵称"
-          placeholder="例如：小王"
-          required
-          clearable
-          :error="guestNameMissing"
-          error-message="昵称必填"
-        />
-        <van-field v-model="note" label="整单备注" placeholder="例如：少辣、不要香菜" />
-        <van-button block type="primary" :loading="submitting" :disabled="!canSubmit" @click="submitOrder">提交点菜</van-button>
+        <div class="order-fields">
+          <van-field
+            v-model="guestName"
+            class="cart-field"
+            label="昵称"
+            placeholder="例如：小王"
+            required
+            clearable
+            :error="guestNameMissing"
+            error-message="昵称必填"
+          />
+          <van-field v-model="note" class="cart-field" label="整单备注" placeholder="例如：整体少辣、饮料要冰" />
+        </div>
+        <van-button block class="submit-order-btn" :loading="submitting" :disabled="!canSubmit" @click="submitOrder">提交点菜</van-button>
       </section>
     </van-popup>
   </main>
@@ -263,7 +362,44 @@ onBeforeUnmount(() => {
 .guest-shell {
   min-height: 100vh;
   padding: 18px 16px 92px;
-  background: #f6f7f9;
+  background:
+    radial-gradient(circle at 12% 8%, rgb(33 214 255 / 18%), transparent 28%),
+    radial-gradient(circle at 88% 20%, rgb(255 74 222 / 14%), transparent 26%),
+    linear-gradient(135deg, #07111f 0%, #101827 48%, #07111f 100%);
+  color: #e5f7ff;
+}
+
+.guest-shell :deep(.muted) {
+  color: #9bb8c8;
+}
+
+.guest-shell :deep(.van-cell) {
+  background: rgb(255 255 255 / 6%);
+  color: #e5f7ff;
+}
+
+.guest-shell :deep(.van-field__label),
+.guest-shell :deep(.van-field__control),
+.guest-shell :deep(.van-field__control::placeholder) {
+  color: #b7d8e8;
+}
+
+.guest-shell :deep(.van-field__control) {
+  font-size: 16px;
+}
+
+.guest-shell :deep(.van-field__label) {
+  font-size: 14px;
+}
+
+.guest-shell :deep(.van-cell::after) {
+  border-color: transparent;
+}
+
+.guest-shell :deep(.status-pill) {
+  background: rgb(67 232 255 / 12%);
+  color: #43e8ff;
+  box-shadow: inset 0 0 0 1px rgb(67 232 255 / 12%);
 }
 
 .event-head {
@@ -273,13 +409,23 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   margin: 0 auto 14px;
   max-width: 980px;
+  padding: 18px;
+  border: 0;
+  border-left: 3px solid #43e8ff;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(67 232 255 / 14%), transparent 34%),
+    linear-gradient(180deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
+  box-shadow: 0 18px 48px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(10px);
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #a15c38;
+  color: #43e8ff;
   font-size: 13px;
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 h1,
@@ -292,6 +438,8 @@ p {
 h1 {
   font-size: 28px;
   line-height: 1.2;
+  color: #f8fbff;
+  text-shadow: 0 0 18px rgb(67 232 255 / 34%);
 }
 
 .menu-layout,
@@ -316,17 +464,18 @@ h1 {
 
 .category-rail button {
   min-height: 42px;
-  border: 1px solid #e5e7eb;
+  border: 0;
   border-radius: 8px;
-  background: white;
-  color: #374151;
+  background: rgb(255 255 255 / 7%);
+  color: #b7d8e8;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
 .category-rail button.active {
-  border-color: #23724a;
-  background: #e8f4ed;
-  color: #1d5b3d;
+  background: linear-gradient(135deg, rgb(26 214 255 / 34%), rgb(157 92 255 / 28%));
+  color: #f8fbff;
   font-weight: 700;
+  box-shadow: 0 0 18px rgb(67 232 255 / 22%), inset 0 0 0 1px rgb(67 232 255 / 18%);
 }
 
 .dish-list {
@@ -335,8 +484,20 @@ h1 {
 }
 
 .dish-list h2 {
-  padding: 8px 2px 0;
+  padding: 14px 2px 2px;
   font-size: 18px;
+  color: #f8fbff;
+  position: relative;
+}
+
+.dish-list h2::after {
+  content: "";
+  display: block;
+  width: 42px;
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #43e8ff, transparent);
 }
 
 .category-anchor {
@@ -345,14 +506,17 @@ h1 {
 
 .dish-row {
   display: grid;
-  grid-template-columns: 84px 1fr 86px;
+  grid-template-columns: 84px minmax(0, 1fr) 124px;
   gap: 12px;
   align-items: center;
   min-height: 112px;
-  padding: 10px;
-  border: 1px solid #e5e7eb;
+  padding: 11px;
+  border: 0;
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%)),
+    rgb(11 22 38 / 84%);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 22%), inset 0 1px 0 rgb(255 255 255 / 7%);
 }
 
 .dish-row img {
@@ -360,7 +524,9 @@ h1 {
   height: 84px;
   border-radius: 8px;
   object-fit: cover;
-  background: #e5e7eb;
+  background: #122033;
+  border: 0;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 10%), 0 10px 20px rgb(0 0 0 / 24%);
 }
 
 .previewable {
@@ -385,17 +551,18 @@ h1 {
 
 .dish-title h3 {
   font-size: 16px;
+  color: #f8fbff;
 }
 
 .dish-title span,
 .tag-list span {
-  color: #6b7280;
+  color: #9bb8c8;
   font-size: 12px;
 }
 
 .dish-info p {
   margin-top: 6px;
-  color: #4b5563;
+  color: #a8c5d4;
   font-size: 13px;
   line-height: 1.45;
 }
@@ -410,7 +577,28 @@ h1 {
 .tag-list span {
   padding: 3px 7px;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: rgb(67 232 255 / 10%);
+  border: 0;
+}
+
+.dish-action {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.ordered-badge {
+  max-width: 116px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  color: #ffe7fb;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  background: linear-gradient(135deg, rgb(255 74 222 / 18%), rgb(67 232 255 / 12%));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%), 0 0 16px rgb(255 74 222 / 16%);
+  overflow-wrap: anywhere;
 }
 
 .stepper {
@@ -425,21 +613,64 @@ h1 {
   height: 28px;
   border: 0;
   border-radius: 50%;
-  background: #23724a;
-  color: white;
+  background: linear-gradient(135deg, #43e8ff, #9d5cff);
+  color: #07111f;
   font-size: 18px;
   line-height: 1;
+  box-shadow: 0 0 16px rgb(67 232 255 / 28%);
+  cursor: pointer;
+  transform: translateZ(0);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.stepper button:hover {
+  box-shadow: 0 0 22px rgb(67 232 255 / 42%), 0 0 30px rgb(157 92 255 / 24%);
+  filter: brightness(1.08);
+}
+
+.stepper button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+  filter: grayscale(0.55);
+  box-shadow: none;
+}
+
+.stepper button:disabled:hover {
+  box-shadow: none;
+  filter: grayscale(0.55);
+}
+
+.stepper button:active {
+  transform: scale(0.86);
+  box-shadow: 0 0 10px rgb(67 232 255 / 34%);
 }
 
 .stepper strong {
   text-align: center;
+  color: #f8fbff;
+  transition: transform 0.16s ease, color 0.16s ease;
+}
+
+.stepper:active strong {
+  color: #43e8ff;
+  transform: scale(1.12);
+}
+
+@media (hover: none) {
+  .stepper button:hover {
+    box-shadow: 0 0 16px rgb(67 232 255 / 28%);
+    filter: none;
+  }
 }
 
 .summary-band {
-  padding: 14px;
-  border: 1px solid #e5e7eb;
+  padding: 16px;
+  border: 0;
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(180deg, rgb(157 92 255 / 12%), transparent),
+    rgb(7 17 31 / 70%);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 24%);
 }
 
 .band-title {
@@ -459,7 +690,7 @@ h1 {
   gap: 8px;
   padding: 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: rgb(255 255 255 / 6%);
 }
 
 .summary-main {
@@ -477,15 +708,15 @@ h1 {
 .guest-list span {
   padding: 3px 7px;
   border-radius: 999px;
-  background: white;
-  color: #4b5563;
+  background: rgb(67 232 255 / 10%);
+  color: #b7d8e8;
   font-size: 12px;
 }
 
 .cart-fab {
   position: fixed;
   right: 16px;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -493,26 +724,108 @@ h1 {
   padding: 0 18px;
   border: 0;
   border-radius: 999px;
-  background: #1f2933;
-  color: white;
-  box-shadow: 0 10px 26px rgb(31 41 51 / 24%);
+  background: linear-gradient(135deg, #43e8ff, #9d5cff);
+  color: #07111f;
+  font-weight: 800;
+  box-shadow: 0 12px 32px rgb(67 232 255 / 26%);
 }
 
 .cart-panel {
-  padding: 18px 16px 24px;
+  padding: 20px 16px calc(26px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 20% 0%, rgb(67 232 255 / 12%), transparent 32%),
+    linear-gradient(180deg, #0b1626, #08111f);
+  color: #e5f7ff;
 }
 
 .cart-panel h2 {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  color: #f8fbff;
+  text-shadow: 0 0 16px rgb(67 232 255 / 30%);
 }
 
 .cart-item {
   display: grid;
-  grid-template-columns: 1fr 86px;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  gap: 12px;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #eef2f7;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%);
+}
+
+.cart-item-main {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cart-item-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.cart-item-title strong {
+  color: #f8fbff;
+  font-size: 16px;
+}
+
+.cart-item-title span {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid rgb(67 232 255 / 20%);
+  border-radius: 999px;
+  color: #43e8ff;
+  font-size: 12px;
+}
+
+.cart-item-title .ordered-badge {
+  max-width: 128px;
+  border: 0;
+  color: #ffe7fb;
+}
+
+.cart-field {
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%);
+}
+
+.order-fields {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.submit-order-btn {
+  height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #43e8ff, #9d5cff);
+  color: #07111f;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: 0 12px 30px rgb(67 232 255 / 24%);
+}
+
+.submit-order-btn::before {
+  display: none;
+}
+
+.submit-order-btn.van-button--disabled {
+  opacity: 0.45;
+  filter: grayscale(0.45);
+  box-shadow: none;
+}
+
+.submit-order-btn :deep(.van-button__text) {
+  color: #07111f;
 }
 
 .compact {
@@ -528,26 +841,135 @@ h1 {
 
 @media (max-width: 560px) {
   .guest-shell {
-    padding-inline: 12px;
+    padding: 14px 10px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .event-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
   }
 
   .menu-layout {
-    grid-template-columns: 78px 1fr;
+    grid-template-columns: 82px minmax(0, 1fr);
     gap: 8px;
   }
 
+  .category-rail button {
+    min-height: 44px;
+    padding: 0 6px;
+    font-size: 14px;
+  }
+
+  .dish-list h2 {
+    font-size: 17px;
+  }
+
   .dish-row {
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
   }
 
   .dish-row img {
-    width: 72px;
-    height: 72px;
+    width: 78px;
+    height: 78px;
   }
 
-  .stepper {
+  .dish-title h3 {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .dish-info p {
+    font-size: 13px;
+  }
+
+  .dish-action {
     grid-column: 2;
     justify-self: end;
+  }
+
+  .ordered-badge {
+    max-width: min(150px, 44vw);
+  }
+
+  .cart-fab {
+    right: 12px;
+    min-height: 50px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  .cart-item {
+    grid-template-columns: 1fr;
+  }
+
+  .compact {
+    justify-self: end;
+  }
+}
+</style>
+
+<style>
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #43e8ff #07111f;
+}
+
+html::-webkit-scrollbar,
+.cart-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track,
+.cart-panel::-webkit-scrollbar-track {
+  background: #07111f;
+}
+
+html::-webkit-scrollbar-thumb,
+.cart-panel::-webkit-scrollbar-thumb {
+  border: 2px solid #07111f;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #43e8ff, #9d5cff);
+  box-shadow: 0 0 12px rgb(67 232 255 / 36%);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.cart-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #7cffc4, #43e8ff);
+}
+
+.confetti-piece {
+  position: fixed;
+  z-index: 4000;
+  pointer-events: none;
+  border-radius: 2px;
+  box-shadow: 0 0 10px currentColor;
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: confetti-burst 680ms cubic-bezier(0.15, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 18px)) scale(0.35) rotate(var(--r));
   }
 }
 </style>

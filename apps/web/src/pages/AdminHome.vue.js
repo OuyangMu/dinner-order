@@ -2,7 +2,8 @@ import { CalendarPlus, ChefHat, ClipboardList, LogIn, QrCode, RefreshCw, Soup } 
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { request } from "../api";
-const isAuthed = computed(() => Boolean(localStorage.getItem("adminToken")));
+const adminToken = ref(localStorage.getItem("adminToken") || "");
+const isAuthed = computed(() => Boolean(adminToken.value));
 const loginForm = reactive({ username: "admin", password: "admin123456" });
 const loginLoading = ref(false);
 const events = ref([]);
@@ -44,6 +45,14 @@ const eventForm = reactive({
     copyFromEventId: ""
 });
 const activeEvent = computed(() => events.value.find((event) => event.id === activeEventId.value));
+const qrcodeOrigin = computed(() => {
+    if (import.meta.env.VITE_PUBLIC_ORIGIN)
+        return import.meta.env.VITE_PUBLIC_ORIGIN;
+    if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+        return `${location.protocol}//192.168.3.69:${location.port || "5173"}`;
+    }
+    return location.origin;
+});
 async function login() {
     loginLoading.value = true;
     try {
@@ -52,6 +61,7 @@ async function login() {
             body: JSON.stringify(loginForm)
         });
         localStorage.setItem("adminToken", result.token);
+        adminToken.value = result.token;
         ElMessage.success("登录成功");
         await loadAdmin();
     }
@@ -81,7 +91,7 @@ async function loadEventData() {
         request(`/api/admin/events/${activeEventId.value}/orders`),
         request(`/api/admin/events/${activeEventId.value}/summary`),
         request(`/api/admin/events/${activeEventId.value}/ingredients`),
-        request(`/api/admin/events/${activeEventId.value}/qrcode?origin=${encodeURIComponent(location.origin)}`)
+        request(`/api/admin/events/${activeEventId.value}/qrcode?origin=${encodeURIComponent(qrcodeOrigin.value)}`)
     ]);
     activeEventDishIds.value = new Set(eventDishes.map((item) => item.dishId));
     orders.value = eventOrders;
@@ -302,7 +312,7 @@ async function deleteOrder(order) {
 }
 function logout() {
     localStorage.removeItem("adminToken");
-    location.reload();
+    adminToken.value = "";
 }
 onMounted(loadAdmin);
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
@@ -311,27 +321,110 @@ let __VLS_components;
 let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['brand']} */ ;
 /** @type {__VLS_StyleScopedClasses['brand']} */ ;
+/** @type {__VLS_StyleScopedClasses['brand']} */ ;
 /** @type {__VLS_StyleScopedClasses['side-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-top']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-top']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric']} */ ;
 /** @type {__VLS_StyleScopedClasses['clickable']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['band-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['qr-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['qr-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['tool-section']} */ ;
+/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['band-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['items-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['subhead']} */ ;
+/** @type {__VLS_StyleScopedClasses['subhead']} */ ;
 /** @type {__VLS_StyleScopedClasses['image-preview']} */ ;
+/** @type {__VLS_StyleScopedClasses['muted']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button--primary']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-textarea__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-select__wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-focus']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-textarea__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-textarea__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-input__inner']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['login-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-form-item__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-table']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-table']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-table']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-table__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-table__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['el-checkbox__inner']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
 /** @type {__VLS_StyleScopedClasses['side-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-side']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-top']} */ ;
 /** @type {__VLS_StyleScopedClasses['qr-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['copy-menu-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-row']} */ ;
