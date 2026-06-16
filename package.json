@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @dinner-order/server",
+    "dev:local": "scripts\\dev-local.cmd",
+    "dev:local:stop": "scripts\\stop-local.cmd",
     "dev:web": "npm run dev --workspace @dinner-order/web",
     "dev:server": "npm run dev --workspace @dinner-order/server",
     "build": "npm run build --workspace @dinner-order/server && npm run build --workspace @dinner-order/web",

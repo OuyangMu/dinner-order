@@ -326,6 +326,23 @@ async function deleteOrder(order: Order) {
   }
 }
 
+async function deleteDish(dish: Dish) {
+  try {
+    await ElMessageBox.confirm(`确定删除“${dish.name}”吗？如果这道菜仍被未关闭活动的订单引用，将无法删除；仅出现在已关闭活动中的历史订单则允许删除。`, "删除菜品", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning"
+    });
+    await request(`/api/admin/dishes/${dish.id}`, { method: "DELETE" });
+    ElMessage.success("菜品已删除");
+    await loadAdmin();
+  } catch (error) {
+    if (error !== "cancel") {
+      ElMessage.error(error instanceof Error ? error.message : "删除失败");
+    }
+  }
+}
+
 function openPasswordDialog() {
   Object.assign(passwordForm, { oldPassword: "", newPassword: "", confirmPassword: "" });
   passwordDialog.value = true;
@@ -526,11 +543,12 @@ onMounted(loadAdmin);
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220">
+          <el-table-column label="操作" width="290">
             <template #default="{ row }">
               <el-button size="small" @click="openDish(row)">编辑</el-button>
               <el-button v-if="!activeEventDishIds.has(row.id)" size="small" @click="addDishToEvent(row)">加入活动</el-button>
               <el-button v-else size="small" type="danger" @click="removeDishFromEvent(row)">移除</el-button>
+              <el-button size="small" type="danger" plain @click="deleteDish(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>

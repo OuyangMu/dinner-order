@@ -393,6 +393,46 @@ app.put("/api/admin/dishes/:id", async (c) => {
   return c.json(mapDish(dish));
 });
 
+app.delete("/api/admin/dishes/:id", async (c) => {
+  const dishId = c.req.param("id");
+  const dish = await prisma.dish.findUnique({
+    where: { id: dishId },
+    include: {
+      eventDishes: { select: { id: true } },
+      orderItems: {
+        select: {
+          id: true,
+          order: {
+            select: {
+              event: {
+                select: { status: true }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+  if (!dish) return c.json({ message: "菜品不存在" }, 404);
+  const blockingOrderItems = dish.orderItems.filter((item) => item.order.event.status !== "CLOSED");
+  if (blockingOrderItems.length) {
+    return c.json({ message: "该菜品已有历史订单，暂不支持删除" }, 400);
+  }
+  await prisma.orderItem.deleteMany({
+    where: {
+      dishId,
+      order: {
+        event: {
+          status: "CLOSED"
+        }
+      }
+    }
+  });
+  await prisma.eventDish.deleteMany({ where: { dishId } });
+  await prisma.dish.delete({ where: { id: dishId } });
+  return c.json({ ok: true });
+});
+
 app.post("/api/admin/events/:id/dishes/:dishId", async (c) => {
   const eventDish = await prisma.eventDish.upsert({
     where: { eventId_dishId: { eventId: c.req.param("id"), dishId: c.req.param("dishId") } },
