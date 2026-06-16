@@ -10,6 +10,7 @@ const code = computed(() => String(route.params.code));
 const loading = ref(true);
 const submitting = ref(false);
 const menu = ref<MenuPayload | null>(null);
+const myOrders = ref<Order[]>([]);
 const summary = ref<SummaryItem[]>([]);
 const activeCategory = ref("");
 const cart = reactive<Record<string, { dish: Dish; quantity: number; note: string }>>({});
@@ -17,6 +18,7 @@ const guestName = ref(localStorage.getItem("guestName") || "");
 const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
+const deletingOrderId = ref("");
 let scrollLockTimer: number | undefined;
 let lockedScrollY = 0;
 
@@ -158,13 +160,40 @@ async function load() {
     menu.value = await request<MenuPayload>(`/api/events/${code.value}/menu`);
     activeCategory.value = menu.value.categories[0]?.id || "";
     requestAnimationFrame(syncActiveCategoryOnScroll);
+    if (guestToken.value) {
+      myOrders.value = await request<Order[]>(`/api/events/${code.value}/orders/${guestToken.value}`).catch(() => []);
+    } else {
+      myOrders.value = [];
+    }
     if (menu.value.event.showSummary) {
       summary.value = await request<SummaryItem[]>(`/api/events/${code.value}/summary`).catch(() => []);
+    } else {
+      summary.value = [];
     }
   } catch (error) {
     showFailToast(error instanceof Error ? error.message : "加载失败");
   } finally {
     loading.value = false;
+  }
+}
+
+async function deleteOwnOrder(order: Order) {
+  if (!menu.value?.event.allowModify) {
+    showFailToast("当前活动不允许自行修改订单");
+    return;
+  }
+
+  deletingOrderId.value = order.id;
+  try {
+    await request(`/api/events/${code.value}/orders/${order.id}?guestToken=${encodeURIComponent(guestToken.value)}`, {
+      method: "DELETE"
+    });
+    showSuccessToast("已撤回点菜");
+    await load();
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : "撤回失败");
+  } finally {
+    deletingOrderId.value = "";
   }
 }
 
@@ -310,6 +339,33 @@ onBeforeUnmount(() => {
             <span v-for="guest in item.guests" :key="guest">{{ guest }}</span>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="summary-band my-orders-band" v-if="myOrders.length">
+      <div class="band-title">
+        <ShoppingCart :size="18" />
+        <h2>我的订单</h2>
+      </div>
+      <div class="summary-list">
+        <article v-for="order in myOrders" :key="order.id" class="summary-row my-order-row">
+          <div class="summary-main">
+            <strong>{{ order.guestName }}</strong>
+            <span>{{ new Date(order.createdAt).toLocaleString() }}</span>
+          </div>
+          <div class="my-order-items">
+            <span v-for="item in order.items" :key="item.id">{{ item.dish.name }} x{{ item.quantity }}</span>
+          </div>
+          <p v-if="order.note" class="my-order-note">整单备注：{{ order.note }}</p>
+          <button
+            v-if="menu.event.allowModify && menu.event.status === 'OPEN'"
+            class="delete-order-btn"
+            :disabled="deletingOrderId === order.id"
+            @click="deleteOwnOrder(order)"
+          >
+            {{ deletingOrderId === order.id ? "撤回中..." : "撤回整单" }}
+          </button>
+        </article>
       </div>
     </section>
 
@@ -673,6 +729,12 @@ h1 {
   box-shadow: 0 16px 38px rgb(0 0 0 / 24%);
 }
 
+.my-orders-band {
+  background:
+    linear-gradient(180deg, rgb(67 232 255 / 10%), transparent),
+    rgb(7 17 31 / 70%);
+}
+
 .band-title {
   display: flex;
   align-items: center;
@@ -711,6 +773,47 @@ h1 {
   background: rgb(67 232 255 / 10%);
   color: #b7d8e8;
   font-size: 12px;
+}
+
+.my-order-row {
+  gap: 10px;
+}
+
+.my-order-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.my-order-items span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  color: #d8f4ff;
+  font-size: 12px;
+}
+
+.my-order-note {
+  color: #9bb8c8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.delete-order-btn {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(255 74 222 / 88%), rgb(157 92 255 / 92%));
+  color: #f8fbff;
+  font-weight: 700;
+  box-shadow: 0 12px 28px rgb(255 74 222 / 16%);
+}
+
+.delete-order-btn:disabled {
+  opacity: 0.5;
+  box-shadow: none;
 }
 
 .cart-fab {

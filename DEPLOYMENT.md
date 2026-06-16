@@ -453,12 +453,22 @@ curl -I http://127.0.0.1
 
 ```bash
 cd /opt/dinner-order
+git pull origin main
 npm install --registry=https://registry.npmmirror.com
 npm run db:push
+npm run db:seed
 npm run build
 pm2 restart dinner-order-api
 systemctl reload nginx
 ```
+
+如果这次更新涉及初始化数据、分类名称、默认活动数据、演示菜品、种子迁移逻辑等内容，必须执行：
+
+```bash
+npm run db:seed
+```
+
+`npm run db:push` 只负责同步数据库结构；`npm run db:seed` 才会同步这类基础数据变更。
 
 如果这次更新只改了前端页面，没有改后端和数据库，最少可以执行：
 
@@ -472,6 +482,19 @@ systemctl reload nginx
 
 ```bash
 cd /opt/dinner-order
+npm run build
+pm2 restart dinner-order-api
+systemctl reload nginx
+```
+
+如果不确定这次代码更新是否包含数据初始化或分类迁移，默认执行完整流程最稳妥：
+
+```bash
+cd /opt/dinner-order
+git pull origin main
+npm install --registry=https://registry.npmmirror.com
+npm run db:push
+npm run db:seed
 npm run build
 pm2 restart dinner-order-api
 systemctl reload nginx

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarPlus, ChefHat, ClipboardList, KeyRound, LogIn, QrCode, RefreshCw, Soup } from "lucide-vue-next";
+import { CalendarPlus, ChefHat, ClipboardList, KeyRound, LayoutDashboard, LogIn, LogOut, QrCode, RefreshCw, Soup } from "lucide-vue-next";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { request, type Category, type Dish, type EventInfo, type IngredientSummaryItem, type Order, type PrepItem, type SummaryItem } from "../api";
@@ -416,16 +416,34 @@ onMounted(loadAdmin);
         <ChefHat :size="26" />
         <strong>聚餐点菜</strong>
       </div>
-      <button :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">仪表盘</button>
-      <button :class="{ active: activeTab === 'events' }" @click="activeTab = 'events'">活动管理</button>
-      <button :class="{ active: activeTab === 'dishes' }" @click="activeTab = 'dishes'">菜品管理</button>
-      <button :class="{ active: activeTab === 'orders' }" @click="activeTab = 'orders'">订单列表</button>
-      <button :class="{ active: activeTab === 'kitchen' }" @click="activeTab = 'kitchen'">备菜汇总</button>
+      <button :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">
+        <LayoutDashboard :size="16" />
+        <span>仪表盘</span>
+      </button>
+      <button :class="{ active: activeTab === 'events' }" @click="activeTab = 'events'">
+        <CalendarPlus :size="16" />
+        <span>活动管理</span>
+      </button>
+      <button :class="{ active: activeTab === 'dishes' }" @click="activeTab = 'dishes'">
+        <ChefHat :size="16" />
+        <span>菜品管理</span>
+      </button>
+      <button :class="{ active: activeTab === 'orders' }" @click="activeTab = 'orders'">
+        <ClipboardList :size="16" />
+        <span>订单列表</span>
+      </button>
+      <button :class="{ active: activeTab === 'kitchen' }" @click="activeTab = 'kitchen'">
+        <Soup :size="16" />
+        <span>备菜汇总</span>
+      </button>
       <button class="utility" @click="openPasswordDialog">
         <KeyRound :size="15" />
-        修改密码
+        <span>修改密码</span>
       </button>
-      <button class="plain" @click="logout">退出登录</button>
+      <button class="plain" @click="logout">
+        <LogOut :size="15" />
+        <span>退出登录</span>
+      </button>
     </aside>
 
     <section class="admin-main">
@@ -815,6 +833,15 @@ p {
   padding: 0 12px;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.admin-side button svg {
+  flex: 0 0 auto;
+}
+
+.admin-side button span {
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-side button:hover {

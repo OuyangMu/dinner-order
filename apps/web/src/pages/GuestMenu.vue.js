@@ -8,6 +8,7 @@ const code = computed(() => String(route.params.code));
 const loading = ref(true);
 const submitting = ref(false);
 const menu = ref(null);
+const myOrders = ref([]);
 const summary = ref([]);
 const activeCategory = ref("");
 const cart = reactive({});
@@ -15,6 +16,7 @@ const guestName = ref(localStorage.getItem("guestName") || "");
 const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
+const deletingOrderId = ref("");
 let scrollLockTimer;
 let lockedScrollY = 0;
 const unlimitedQuantityCategories = new Set(["主食", "饮品"]);
@@ -140,8 +142,17 @@ async function load() {
         menu.value = await request(`/api/events/${code.value}/menu`);
         activeCategory.value = menu.value.categories[0]?.id || "";
         requestAnimationFrame(syncActiveCategoryOnScroll);
+        if (guestToken.value) {
+            myOrders.value = await request(`/api/events/${code.value}/orders/${guestToken.value}`).catch(() => []);
+        }
+        else {
+            myOrders.value = [];
+        }
         if (menu.value.event.showSummary) {
             summary.value = await request(`/api/events/${code.value}/summary`).catch(() => []);
+        }
+        else {
+            summary.value = [];
         }
     }
     catch (error) {
@@ -149,6 +160,26 @@ async function load() {
     }
     finally {
         loading.value = false;
+    }
+}
+async function deleteOwnOrder(order) {
+    if (!menu.value?.event.allowModify) {
+        showFailToast("当前活动不允许自行修改订单");
+        return;
+    }
+    deletingOrderId.value = order.id;
+    try {
+        await request(`/api/events/${code.value}/orders/${order.id}?guestToken=${encodeURIComponent(guestToken.value)}`, {
+            method: "DELETE"
+        });
+        showSuccessToast("已撤回点菜");
+        await load();
+    }
+    catch (error) {
+        showFailToast(error instanceof Error ? error.message : "撤回失败");
+    }
+    finally {
+        deletingOrderId.value = "";
     }
 }
 async function submitOrder() {
@@ -255,6 +286,8 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-order-items']} */ ;
+/** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item-title']} */ ;
@@ -452,6 +485,72 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             }
         }
     }
+    if (__VLS_ctx.myOrders.length) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+            ...{ class: "summary-band my-orders-band" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "band-title" },
+        });
+        const __VLS_4 = {}.ShoppingCart;
+        /** @type {[typeof __VLS_components.ShoppingCart, ]} */ ;
+        // @ts-ignore
+        const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
+            size: (18),
+        }));
+        const __VLS_6 = __VLS_5({
+            size: (18),
+        }, ...__VLS_functionalComponentArgsRest(__VLS_5));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "summary-list" },
+        });
+        for (const [order] of __VLS_getVForSourceType((__VLS_ctx.myOrders))) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+                key: (order.id),
+                ...{ class: "summary-row my-order-row" },
+            });
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                ...{ class: "summary-main" },
+            });
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+            (order.guestName);
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+            (new Date(order.createdAt).toLocaleString());
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                ...{ class: "my-order-items" },
+            });
+            for (const [item] of __VLS_getVForSourceType((order.items))) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                    key: (item.id),
+                });
+                (item.dish.name);
+                (item.quantity);
+            }
+            if (order.note) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+                    ...{ class: "my-order-note" },
+                });
+                (order.note);
+            }
+            if (__VLS_ctx.menu.event.allowModify && __VLS_ctx.menu.event.status === 'OPEN') {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                    ...{ onClick: (...[$event]) => {
+                            if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
+                                return;
+                            if (!(__VLS_ctx.myOrders.length))
+                                return;
+                            if (!(__VLS_ctx.menu.event.allowModify && __VLS_ctx.menu.event.status === 'OPEN'))
+                                return;
+                            __VLS_ctx.deleteOwnOrder(order);
+                        } },
+                    ...{ class: "delete-order-btn" },
+                    disabled: (__VLS_ctx.deletingOrderId === order.id),
+                });
+                (__VLS_ctx.deletingOrderId === order.id ? "撤回中..." : "撤回整单");
+            }
+        }
+    }
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         ...{ onClick: (...[$event]) => {
                 if (!(!__VLS_ctx.loading && __VLS_ctx.menu))
@@ -460,31 +559,31 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             } },
         ...{ class: "cart-fab" },
     });
-    const __VLS_4 = {}.ShoppingCart;
+    const __VLS_8 = {}.ShoppingCart;
     /** @type {[typeof __VLS_components.ShoppingCart, ]} */ ;
     // @ts-ignore
-    const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
-        size: (20),
-    }));
-    const __VLS_6 = __VLS_5({
-        size: (20),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_5));
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (__VLS_ctx.cartCount);
-    const __VLS_8 = {}.VanPopup;
-    /** @type {[typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, ]} */ ;
-    // @ts-ignore
     const __VLS_9 = __VLS_asFunctionalComponent(__VLS_8, new __VLS_8({
-        show: (__VLS_ctx.showCart),
-        position: "bottom",
-        round: true,
+        size: (20),
     }));
     const __VLS_10 = __VLS_9({
+        size: (20),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_9));
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.cartCount);
+    const __VLS_12 = {}.VanPopup;
+    /** @type {[typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, typeof __VLS_components.VanPopup, typeof __VLS_components.vanPopup, ]} */ ;
+    // @ts-ignore
+    const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
         show: (__VLS_ctx.showCart),
         position: "bottom",
         round: true,
-    }, ...__VLS_functionalComponentArgsRest(__VLS_9));
-    __VLS_11.slots.default;
+    }));
+    const __VLS_14 = __VLS_13({
+        show: (__VLS_ctx.showCart),
+        position: "bottom",
+        round: true,
+    }, ...__VLS_functionalComponentArgsRest(__VLS_13));
+    __VLS_15.slots.default;
     __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
         ...{ class: "cart-panel" },
     });
@@ -517,21 +616,21 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
             (item.quantity);
         }
-        const __VLS_12 = {}.VanField;
+        const __VLS_16 = {}.VanField;
         /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
         // @ts-ignore
-        const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
+        const __VLS_17 = __VLS_asFunctionalComponent(__VLS_16, new __VLS_16({
             modelValue: (item.note),
             ...{ class: "cart-field" },
             label: "单项备注",
             placeholder: "少辣、不要香菜，可不填",
         }));
-        const __VLS_14 = __VLS_13({
+        const __VLS_18 = __VLS_17({
             modelValue: (item.note),
             ...{ class: "cart-field" },
             label: "单项备注",
             placeholder: "少辣、不要香菜，可不填",
-        }, ...__VLS_functionalComponentArgsRest(__VLS_13));
+        }, ...__VLS_functionalComponentArgsRest(__VLS_17));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "stepper compact" },
         });
@@ -558,70 +657,70 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "order-fields" },
     });
-    const __VLS_16 = {}.VanField;
-    /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
-    // @ts-ignore
-    const __VLS_17 = __VLS_asFunctionalComponent(__VLS_16, new __VLS_16({
-        modelValue: (__VLS_ctx.guestName),
-        ...{ class: "cart-field" },
-        label: "昵称",
-        placeholder: "例如：小王",
-        required: true,
-        clearable: true,
-        error: (__VLS_ctx.guestNameMissing),
-        errorMessage: "昵称必填",
-    }));
-    const __VLS_18 = __VLS_17({
-        modelValue: (__VLS_ctx.guestName),
-        ...{ class: "cart-field" },
-        label: "昵称",
-        placeholder: "例如：小王",
-        required: true,
-        clearable: true,
-        error: (__VLS_ctx.guestNameMissing),
-        errorMessage: "昵称必填",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_17));
     const __VLS_20 = {}.VanField;
     /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
     // @ts-ignore
     const __VLS_21 = __VLS_asFunctionalComponent(__VLS_20, new __VLS_20({
-        modelValue: (__VLS_ctx.note),
+        modelValue: (__VLS_ctx.guestName),
         ...{ class: "cart-field" },
-        label: "整单备注",
-        placeholder: "例如：整体少辣、饮料要冰",
+        label: "昵称",
+        placeholder: "例如：小王",
+        required: true,
+        clearable: true,
+        error: (__VLS_ctx.guestNameMissing),
+        errorMessage: "昵称必填",
     }));
     const __VLS_22 = __VLS_21({
+        modelValue: (__VLS_ctx.guestName),
+        ...{ class: "cart-field" },
+        label: "昵称",
+        placeholder: "例如：小王",
+        required: true,
+        clearable: true,
+        error: (__VLS_ctx.guestNameMissing),
+        errorMessage: "昵称必填",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_21));
+    const __VLS_24 = {}.VanField;
+    /** @type {[typeof __VLS_components.VanField, typeof __VLS_components.vanField, ]} */ ;
+    // @ts-ignore
+    const __VLS_25 = __VLS_asFunctionalComponent(__VLS_24, new __VLS_24({
         modelValue: (__VLS_ctx.note),
         ...{ class: "cart-field" },
         label: "整单备注",
         placeholder: "例如：整体少辣、饮料要冰",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_21));
-    const __VLS_24 = {}.VanButton;
+    }));
+    const __VLS_26 = __VLS_25({
+        modelValue: (__VLS_ctx.note),
+        ...{ class: "cart-field" },
+        label: "整单备注",
+        placeholder: "例如：整体少辣、饮料要冰",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_25));
+    const __VLS_28 = {}.VanButton;
     /** @type {[typeof __VLS_components.VanButton, typeof __VLS_components.vanButton, typeof __VLS_components.VanButton, typeof __VLS_components.vanButton, ]} */ ;
     // @ts-ignore
-    const __VLS_25 = __VLS_asFunctionalComponent(__VLS_24, new __VLS_24({
+    const __VLS_29 = __VLS_asFunctionalComponent(__VLS_28, new __VLS_28({
         ...{ 'onClick': {} },
         block: true,
         ...{ class: "submit-order-btn" },
         loading: (__VLS_ctx.submitting),
         disabled: (!__VLS_ctx.canSubmit),
     }));
-    const __VLS_26 = __VLS_25({
+    const __VLS_30 = __VLS_29({
         ...{ 'onClick': {} },
         block: true,
         ...{ class: "submit-order-btn" },
         loading: (__VLS_ctx.submitting),
         disabled: (!__VLS_ctx.canSubmit),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_25));
-    let __VLS_28;
-    let __VLS_29;
-    let __VLS_30;
-    const __VLS_31 = {
+    }, ...__VLS_functionalComponentArgsRest(__VLS_29));
+    let __VLS_32;
+    let __VLS_33;
+    let __VLS_34;
+    const __VLS_35 = {
         onClick: (__VLS_ctx.submitOrder)
     };
-    __VLS_27.slots.default;
-    var __VLS_27;
-    var __VLS_11;
+    __VLS_31.slots.default;
+    var __VLS_31;
+    var __VLS_15;
 }
 else {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -650,6 +749,16 @@ else {
 /** @type {__VLS_StyleScopedClasses['summary-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['guest-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-orders-band']} */ ;
+/** @type {__VLS_StyleScopedClasses['band-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-order-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['summary-main']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-order-items']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-order-note']} */ ;
+/** @type {__VLS_StyleScopedClasses['delete-order-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-fab']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['empty']} */ ;
@@ -674,12 +783,14 @@ const __VLS_self = (await import('vue')).defineComponent({
             loading: loading,
             submitting: submitting,
             menu: menu,
+            myOrders: myOrders,
             summary: summary,
             activeCategory: activeCategory,
             cart: cart,
             guestName: guestName,
             note: note,
             showCart: showCart,
+            deletingOrderId: deletingOrderId,
             isUnlimitedQuantityDish: isUnlimitedQuantityDish,
             cartItems: cartItems,
             cartCount: cartCount,
@@ -693,6 +804,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             burstConfetti: burstConfetti,
             categoryAnchorId: categoryAnchorId,
             scrollToCategory: scrollToCategory,
+            deleteOwnOrder: deleteOwnOrder,
             submitOrder: submitOrder,
         };
     },

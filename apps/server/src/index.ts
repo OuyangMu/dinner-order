@@ -9,6 +9,7 @@ import { cors } from "hono/cors";
 import { serveStatic } from "@hono/node-server/serve-static";
 import QRCode from "qrcode";
 import { z } from "zod";
+import { canGuestDeleteOwnOrder } from "./order-permissions.js";
 
 const prisma = new PrismaClient();
 const app = new Hono<{ Variables: { admin: AdminPayload } }>();
@@ -253,6 +254,29 @@ app.get("/api/events/:code/orders/:guestToken", async (c) => {
     orderBy: { createdAt: "desc" }
   });
   return c.json(orders.map((order: any) => ({ ...order, items: order.items.map((item: any) => ({ ...item, dish: mapDish(item.dish) })) })));
+});
+
+app.delete("/api/events/:code/orders/:orderId", async (c) => {
+  const event = await prisma.event.findUnique({ where: { accessCode: c.req.param("code") } });
+  if (!event) return c.json({ message: "活动不存在" }, 404);
+
+  const order = await prisma.order.findUnique({ where: { id: c.req.param("orderId") } });
+  if (!order || order.eventId !== event.id) {
+    return c.json({ message: "订单不存在" }, 404);
+  }
+
+  const permission = canGuestDeleteOwnOrder({
+    eventStatus: event.status,
+    allowModify: event.allowModify,
+    requesterGuestToken: c.req.query("guestToken") || "",
+    orderGuestToken: order.guestToken
+  });
+  if (!permission.allowed) {
+    return c.json({ message: permission.message }, 403);
+  }
+
+  await prisma.order.delete({ where: { id: order.id } });
+  return c.json({ ok: true });
 });
 
 app.get("/api/events/:code/summary", async (c) => {
