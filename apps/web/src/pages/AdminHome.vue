@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarPlus, ChefHat, ClipboardList, LogIn, QrCode, RefreshCw, Soup } from "lucide-vue-next";
+import { CalendarPlus, ChefHat, ClipboardList, KeyRound, LogIn, QrCode, RefreshCw, Soup } from "lucide-vue-next";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { request, type Category, type Dish, type EventInfo, type IngredientSummaryItem, type Order, type PrepItem, type SummaryItem } from "../api";
@@ -20,6 +20,8 @@ const activeEventId = ref("");
 const activeTab = ref("dashboard");
 const dishDialog = ref(false);
 const eventDialog = ref(false);
+const passwordDialog = ref(false);
+const passwordSaving = ref(false);
 const editingDishId = ref("");
 const editingEventId = ref("");
 const copyTargetEventId = ref("");
@@ -45,6 +47,11 @@ const eventForm = reactive({
   allowModify: true,
   showSummary: true,
   copyFromEventId: ""
+});
+const passwordForm = reactive({
+  oldPassword: "",
+  newPassword: "",
+  confirmPassword: ""
 });
 
 const activeEvent = computed(() => events.value.find((event) => event.id === activeEventId.value));
@@ -319,6 +326,40 @@ async function deleteOrder(order: Order) {
   }
 }
 
+function openPasswordDialog() {
+  Object.assign(passwordForm, { oldPassword: "", newPassword: "", confirmPassword: "" });
+  passwordDialog.value = true;
+}
+
+async function savePassword() {
+  if (passwordForm.newPassword.length < 8) {
+    ElMessage.error("新密码至少 8 位");
+    return;
+  }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    ElMessage.error("两次输入的新密码不一致");
+    return;
+  }
+
+  passwordSaving.value = true;
+  try {
+    await request("/api/admin/password", {
+      method: "PUT",
+      body: JSON.stringify({
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword
+      })
+    });
+    ElMessage.success("密码已修改，请使用新密码重新登录");
+    passwordDialog.value = false;
+    logout();
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "修改密码失败");
+  } finally {
+    passwordSaving.value = false;
+  }
+}
+
 function logout() {
   localStorage.removeItem("adminToken");
   adminToken.value = "";
@@ -363,6 +404,10 @@ onMounted(loadAdmin);
       <button :class="{ active: activeTab === 'dishes' }" @click="activeTab = 'dishes'">菜品管理</button>
       <button :class="{ active: activeTab === 'orders' }" @click="activeTab = 'orders'">订单列表</button>
       <button :class="{ active: activeTab === 'kitchen' }" @click="activeTab = 'kitchen'">备菜汇总</button>
+      <button class="utility" @click="openPasswordDialog">
+        <KeyRound :size="15" />
+        修改密码
+      </button>
       <button class="plain" @click="logout">退出登录</button>
     </aside>
 
@@ -615,6 +660,24 @@ onMounted(loadAdmin);
         <el-button type="primary" @click="saveEvent">{{ editingEventId ? "保存" : "创建" }}</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="passwordDialog" title="修改密码" width="460px">
+      <el-form label-position="top">
+        <el-form-item label="原密码">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password autocomplete="current-password" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password autocomplete="new-password" placeholder="至少 8 位" />
+        </el-form-item>
+        <el-form-item label="确认新密码">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password autocomplete="new-password" @keyup.enter="savePassword" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialog = false">取消</el-button>
+        <el-button type="primary" :loading="passwordSaving" @click="savePassword">保存新密码</el-button>
+      </template>
+    </el-dialog>
   </main>
 </template>
 
@@ -718,6 +781,9 @@ p {
 }
 
 .admin-side button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   min-height: 40px;
   margin-bottom: 8px;
@@ -744,8 +810,13 @@ p {
   box-shadow: 0 0 18px rgb(67 232 255 / 18%), inset 0 0 0 1px rgb(67 232 255 / 18%);
 }
 
-.admin-side button.plain {
+.admin-side button.utility {
   margin-top: 18px;
+  color: #d8f4ff;
+}
+
+.admin-side button.plain {
+  margin-top: 8px;
   color: #ff9fc8;
 }
 
@@ -1138,6 +1209,7 @@ p {
   }
 
   .admin-side button {
+    justify-content: center;
     width: auto;
     min-width: 88px;
     margin: 0;

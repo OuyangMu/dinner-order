@@ -86,6 +86,11 @@ const eventSchema = z.object({
   copyFromEventId: z.string().optional().nullable()
 });
 
+const passwordSchema = z.object({
+  oldPassword: z.string().min(1),
+  newPassword: z.string().min(8, "新密码至少 8 位").max(64)
+});
+
 function signToken(payload: AdminPayload) {
   const body = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString("base64url");
   const signature = createHmac("sha256", jwtSecret).update(body).digest("base64url");
@@ -274,6 +279,21 @@ app.post("/api/admin/login", async (c) => {
 app.use("/api/admin/*", requireAdmin);
 
 app.get("/api/admin/me", (c) => c.json(c.get("admin")));
+
+app.put("/api/admin/password", async (c) => {
+  const body = passwordSchema.parse(await c.req.json());
+  const payload = c.get("admin");
+  const admin = await prisma.admin.findUnique({ where: { id: payload.id } });
+  if (!admin || !(await bcrypt.compare(body.oldPassword, admin.passwordHash))) {
+    return c.json({ message: "原密码错误" }, 400);
+  }
+  if (await bcrypt.compare(body.newPassword, admin.passwordHash)) {
+    return c.json({ message: "新密码不能和原密码相同" }, 400);
+  }
+  const passwordHash = await bcrypt.hash(body.newPassword, 10);
+  await prisma.admin.update({ where: { id: payload.id }, data: { passwordHash } });
+  return c.json({ ok: true });
+});
 
 app.get("/api/admin/events", async (c) => {
   const events = await prisma.event.findMany({ orderBy: { createdAt: "desc" } });
