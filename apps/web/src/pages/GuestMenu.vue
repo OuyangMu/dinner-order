@@ -266,7 +266,7 @@ onBeforeUnmount(() => {
   <main class="guest-shell" v-if="!loading && menu">
     <section class="event-head">
       <div>
-        <p class="eyebrow">家庭朋友聚餐</p>
+        <p class="eyebrow">小欧饭堂</p>
         <h1>{{ menu.event.title }}</h1>
         <p class="muted">{{ menu.event.description || "选好想吃的，主人会在后台汇总备菜。" }}</p>
       </div>

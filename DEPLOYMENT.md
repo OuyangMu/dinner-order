@@ -146,6 +146,9 @@ npm run db:push
 npm run db:seed
 ```
 
+注意：
+`npm run db:seed` 适合首次部署初始化使用，不建议在已经有正式菜品数据的服务器上作为日常更新步骤反复执行。
+
 默认后台账号：
 
 ```text
@@ -456,19 +459,27 @@ cd /opt/dinner-order
 git pull origin main
 npm install --registry=https://registry.npmmirror.com
 npm run db:push
-npm run db:seed
 npm run build
 pm2 restart dinner-order-api
 systemctl reload nginx
 ```
 
-如果这次更新涉及初始化数据、分类名称、默认活动数据、演示菜品、种子迁移逻辑等内容，必须执行：
+上面这套是正式环境日常更新的推荐流程，默认不要执行 `npm run db:seed`，避免覆盖或改动服务器上已经在后台维护过的菜品、分类、演示活动等数据。
+
+只有以下两类场景才建议执行 `npm run db:seed`：
+
+1. 首次部署，数据库还是空的，需要初始化管理员和基础演示数据
+2. 你明确知道这次更新需要执行初始化数据脚本，并且确认不会影响线上已有业务数据
+
+如果后续需要做“分类更名、演示数据修正、历史数据迁移”这类动作，建议单独编写一次性迁移脚本，不要继续把它放进日常 `db:seed` 流程。
+
+如果这是首次部署，或你明确要初始化空数据库，可以额外执行：
 
 ```bash
 npm run db:seed
 ```
 
-`npm run db:push` 只负责同步数据库结构；`npm run db:seed` 才会同步这类基础数据变更。
+`npm run db:push` 只负责同步数据库结构，不会帮你初始化演示数据或管理员账号。
 
 如果这次更新只改了前端页面，没有改后端和数据库，最少可以执行：
 
@@ -487,14 +498,13 @@ pm2 restart dinner-order-api
 systemctl reload nginx
 ```
 
-如果不确定这次代码更新是否包含数据初始化或分类迁移，默认执行完整流程最稳妥：
+如果不确定这次代码更新是否会影响线上已有数据，优先使用“不执行 `db:seed`”的日常更新流程；只有在确认是首次初始化或明确需要数据初始化时，再单独补执行 `npm run db:seed`：
 
 ```bash
 cd /opt/dinner-order
 git pull origin main
 npm install --registry=https://registry.npmmirror.com
 npm run db:push
-npm run db:seed
 npm run build
 pm2 restart dinner-order-api
 systemctl reload nginx
@@ -637,7 +647,7 @@ location / {
 [ ] .env 已配置
 [ ] JWT_SECRET 已修改
 [ ] npm run db:push 已执行
-[ ] npm run db:seed 已执行
+[ ] 如为首次部署或明确需要初始化数据：`npm run db:seed` 已执行
 [ ] npm run build 已成功
 [ ] PM2 后端已启动
 [ ] Nginx 已配置
