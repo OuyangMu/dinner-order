@@ -422,6 +422,63 @@ systemctl reload nginx
 
 如果升级失败，可以恢复备份。
 
+### 14.1 代码更新后，服务器需要执行什么
+
+如果服务器可以正常访问 GitHub，推荐使用下面这套标准流程：
+
+```bash
+cd /opt/dinner-order
+tar -czf /opt/backups/dinner-order/before-update-$(date +%F-%H%M%S).tar.gz data uploads
+git pull
+npm install --registry=https://registry.npmmirror.com
+npm run db:push
+npm run build
+pm2 restart dinner-order-api
+systemctl reload nginx
+```
+
+执行完成后建议检查：
+
+```bash
+pm2 status
+curl http://127.0.0.1:8787/health
+curl -I http://127.0.0.1
+```
+
+如果服务器网络不稳定，`git pull` 经常卡住，可以改成本地更新代码后再上传服务器。推荐流程：
+
+1. 本地先拉最新代码并确认修改完成。
+2. 上传代码到服务器，保留服务器上的 `data/` 和 `uploads/`。
+3. 服务器执行下面命令完成更新：
+
+```bash
+cd /opt/dinner-order
+npm install --registry=https://registry.npmmirror.com
+npm run db:push
+npm run build
+pm2 restart dinner-order-api
+systemctl reload nginx
+```
+
+如果这次更新只改了前端页面，没有改后端和数据库，最少可以执行：
+
+```bash
+cd /opt/dinner-order
+npm run build --workspace @dinner-order/web
+systemctl reload nginx
+```
+
+如果这次更新改了后端接口，但没有改数据库结构，最少执行：
+
+```bash
+cd /opt/dinner-order
+npm run build
+pm2 restart dinner-order-api
+systemctl reload nginx
+```
+
+如果不确定这次改动影响范围，默认执行完整流程最稳。
+
 ## 15. 常用运维命令
 
 查看后端状态：
@@ -567,4 +624,3 @@ location / {
 [ ] data/app.db 已纳入备份
 [ ] uploads 已纳入备份
 ```
-

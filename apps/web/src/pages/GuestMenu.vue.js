@@ -17,7 +17,7 @@ const note = ref("");
 const showCart = ref(false);
 let scrollLockTimer;
 let lockedScrollY = 0;
-const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+const unlimitedQuantityCategories = new Set(["主食", "饮品"]);
 function isUnlimitedQuantityDish(dish) {
     return unlimitedQuantityCategories.has(dish.category?.name || "");
 }

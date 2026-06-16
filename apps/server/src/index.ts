@@ -48,7 +48,7 @@ const orderSchema = z.object({
     .min(1)
 });
 
-const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+const unlimitedQuantityCategories = new Set(["主食", "饮品"]);
 
 function isUnlimitedQuantityDish(dish: { category?: { name?: string } | null }) {
   return unlimitedQuantityCategories.has(dish.category?.name || "");

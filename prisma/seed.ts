@@ -3,37 +3,122 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const targetCategories = ["汤类", "主食", "饮品", "炒菜", "凉拌", "砂锅", "斩料"] as const;
+
+const legacyCategoryMap = new Map<string, (typeof targetCategories)[number]>([
+  ["汤类", "汤类"],
+  ["主食", "主食"],
+  ["饮品", "饮品"],
+  ["饮料", "饮品"],
+  ["炒菜", "炒菜"],
+  ["热菜", "炒菜"],
+  ["凉拌", "凉拌"],
+  ["凉菜", "凉拌"],
+  ["砂锅", "砂锅"],
+  ["斩料", "斩料"]
+]);
+
 const dishes = [
   {
-    category: "凉菜",
+    category: "凉拌",
     items: [
-      ["凉拌黄瓜", "清爽开胃，适合先上桌。", ["素", "清爽"], "约 2 人份", [["黄瓜", 2, "根"], ["蒜", 10, "g"]]],
-      ["夫妻肺片", "香辣浓郁，适合下酒。", ["辣", "下酒"], "约 2-3 人份", [["牛肉", 250, "g"], ["辣椒油", 30, "ml"]]]
+      ["凉拌黄瓜", "清爽开胃，适合聚餐先上桌。", ["清爽", "开胃"], "约 2 人份", [["黄瓜", 2, "根"], ["蒜", 10, "g"]]],
+      ["皮蛋豆腐", "冰凉顺口，适合夏天聚餐。", ["凉菜", "清淡"], "约 2 人份", [["内酯豆腐", 1, "盒"], ["皮蛋", 2, "个"]]]
     ]
   },
   {
-    category: "热菜",
+    category: "炒菜",
     items: [
-      ["宫保鸡丁", "酸甜微辣，朋友聚餐稳妥款。", ["微辣", "招牌"], "约 2-3 人份", [["鸡腿肉", 300, "g"], ["花生", 40, "g"], ["黄瓜", 0.5, "根"]]],
-      ["番茄牛腩", "汤汁浓厚，适合配饭。", ["热乎", "推荐"], "约 3 人份", [["牛腩", 500, "g"], ["番茄", 3, "个"]]],
-      ["清炒时蔬", "平衡一桌肉菜。", ["素", "清淡"], "约 2 人份", [["青菜", 400, "g"], ["蒜", 8, "g"]]]
+      ["宫保鸡丁", "酸甜微辣，聚餐里的稳妥选择。", ["微辣", "招牌"], "约 2-3 人份", [["鸡腿肉", 300, "g"], ["花生", 40, "g"], ["黄瓜", 0.5, "根"]]],
+      ["清炒时蔬", "平衡一桌荤素，清爽不腻。", ["素菜", "清淡"], "约 2 人份", [["青菜", 400, "g"], ["蒜", 8, "g"]]]
+    ]
+  },
+  {
+    category: "汤类",
+    items: [
+      ["番茄蛋花汤", "酸甜暖胃，适合所有人。", ["热汤", "家常"], "约 3 人份", [["番茄", 2, "个"], ["鸡蛋", 2, "个"]]],
+      ["紫菜虾皮汤", "做法快，适合补一个汤位。", ["快手", "鲜味"], "约 3 人份", [["紫菜", 15, "g"], ["虾皮", 20, "g"]]]
+    ]
+  },
+  {
+    category: "砂锅",
+    items: [
+      ["砂锅土豆粉", "热乎耐吃，适合多人分享。", ["热乎", "饱腹"], "约 2-3 人份", [["土豆粉", 300, "g"], ["午餐肉", 100, "g"]]],
+      ["砂锅豆腐", "口感软嫩，适合老人小孩。", ["家常", "下饭"], "约 3 人份", [["北豆腐", 2, "块"], ["香菇", 80, "g"]]]
+    ]
+  },
+  {
+    category: "斩料",
+    items: [
+      ["白切鸡", "经典聚餐冷盘，蘸料很关键。", ["招牌", "分享"], "约 3-4 人份", [["三黄鸡", 1, "只"], ["姜葱蘸料", 1, "份"]]],
+      ["卤味拼盘", "适合边聊边吃。", ["下酒", "拼盘"], "约 2-3 人份", [["鸭翅", 4, "个"], ["卤蛋", 4, "个"]]]
     ]
   },
   {
     category: "主食",
     items: [
-      ["葱油拌面", "简单但很受欢迎。", ["主食"], "1 份/人", [["面条", 150, "g"], ["小葱", 20, "g"]]],
+      ["葱油拌面", "简单但很受欢迎。", ["主食"], "1 份 / 人", [["面条", 150, "g"], ["小葱", 20, "g"]]],
       ["米饭", "默认小碗。", ["主食"], "1 碗", [["大米", 80, "g"]]]
     ]
   },
   {
     category: "饮品",
     items: [
-      ["冰镇可乐", "快乐气泡。", ["冰镇"], "330ml", [["可乐", 1, "罐"]]],
+      ["冰镇可乐", "聚餐里很稳的快乐水。", ["冰镇"], "330ml", [["可乐", 1, "罐"]]],
       ["柠檬茶", "酸甜解腻。", ["无酒精"], "500ml", [["柠檬茶", 1, "瓶"]]]
     ]
   }
 ] as const;
+
+async function ensureCanonicalCategories() {
+  const canonicalCategories = new Map<string, { id: string; name: string }>();
+
+  for (const [sortOrder, name] of targetCategories.entries()) {
+    const category = await prisma.category.upsert({
+      where: { name },
+      update: { sortOrder, enabled: true },
+      create: { name, sortOrder, enabled: true }
+    });
+    canonicalCategories.set(name, category);
+  }
+
+  const existingCategories = await prisma.category.findMany({
+    include: { dishes: { select: { id: true, name: true } } }
+  });
+
+  for (const category of existingCategories) {
+    const targetName = legacyCategoryMap.get(category.name);
+    if (!targetName || targetName === category.name) continue;
+
+    const targetCategory = canonicalCategories.get(targetName);
+    if (!targetCategory) continue;
+
+    for (const dish of category.dishes) {
+      const duplicate = await prisma.dish.findFirst({
+        where: { categoryId: targetCategory.id, name: dish.name },
+        select: { id: true }
+      });
+
+      if (duplicate) continue;
+
+      await prisma.dish.update({
+        where: { id: dish.id },
+        data: { categoryId: targetCategory.id }
+      });
+    }
+  }
+
+  const legacyCategories = await prisma.category.findMany({
+    where: { name: { in: ["凉菜", "热菜", "饮料"] } },
+    include: { dishes: { select: { id: true } } }
+  });
+
+  for (const category of legacyCategories) {
+    if (category.dishes.length === 0) {
+      await prisma.category.delete({ where: { id: category.id } });
+    }
+  }
+}
 
 async function main() {
   const passwordHash = await bcrypt.hash("admin123456", 10);
@@ -44,27 +129,37 @@ async function main() {
     create: { username: "admin", passwordHash }
   });
 
+  await ensureCanonicalCategories();
+
   const event = await prisma.event.upsert({
     where: { accessCode: "family-demo" },
     update: {},
     create: {
       title: "周末朋友聚餐",
-      description: "扫码点菜，主人后台汇总备菜。",
+      description: "扫码点菜，后台汇总备菜。",
       status: "OPEN",
       accessCode: "family-demo",
       dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
     }
   });
 
-  let categoryOrder = 0;
+  const categoryMap = new Map(
+    (
+      await prisma.category.findMany({
+        where: { name: { in: [...targetCategories] } }
+      })
+    ).map((category) => [category.name, category])
+  );
+
   let dishOrder = 0;
-  for (const group of dishes) {
-    const category = await prisma.category.upsert({
-      where: { name: group.category },
-      update: { sortOrder: categoryOrder },
-      create: { name: group.category, sortOrder: categoryOrder }
+  for (const [categoryOrder, group] of dishes.entries()) {
+    const category = categoryMap.get(group.category);
+    if (!category) continue;
+
+    await prisma.category.update({
+      where: { id: category.id },
+      data: { sortOrder: categoryOrder, enabled: true }
     });
-    categoryOrder += 1;
 
     for (const [name, description, tags, servingHint, prepItems] of group.items) {
       const sortOrder = dishOrder++;
@@ -76,7 +171,7 @@ async function main() {
           prepItems: JSON.stringify(prepItems.map(([itemName, quantity, unit]) => ({ name: itemName, quantity, unit }))),
           servingHint,
           sortOrder,
-          imageUrl: `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80`
+          imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80"
         },
         create: {
           name,
@@ -86,7 +181,7 @@ async function main() {
           prepItems: JSON.stringify(prepItems.map(([itemName, quantity, unit]) => ({ name: itemName, quantity, unit }))),
           servingHint,
           sortOrder,
-          imageUrl: `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80`
+          imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80"
         }
       });
 

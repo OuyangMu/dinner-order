@@ -20,7 +20,7 @@ const showCart = ref(false);
 let scrollLockTimer: number | undefined;
 let lockedScrollY = 0;
 
-const unlimitedQuantityCategories = new Set(["主食", "饮料", "饮品"]);
+const unlimitedQuantityCategories = new Set(["主食", "饮品"]);
 
 function isUnlimitedQuantityDish(dish: Dish) {
   return unlimitedQuantityCategories.has(dish.category?.name || "");
