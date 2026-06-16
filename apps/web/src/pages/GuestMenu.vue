@@ -4,6 +4,7 @@ import { showFailToast, showImagePreview, showSuccessToast } from "vant";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { request, type Dish, type MenuPayload, type Order, type SummaryItem } from "../api";
+import { canDecreaseDishQuantity } from "../guest-menu-stepper";
 
 const route = useRoute();
 const code = computed(() => String(route.params.code));
@@ -308,7 +309,7 @@ onBeforeUnmount(() => {
             <div class="dish-action">
               <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
               <div class="stepper">
-                <button aria-label="减少" @click="remove(dish); burstConfetti($event)">-</button>
+                <button :disabled="!canDecreaseDishQuantity(cart[dish.id]?.quantity || 0)" aria-label="减少" @click="remove(dish); burstConfetti($event)">-</button>
                 <strong>{{ cart[dish.id]?.quantity || 0 }}</strong>
                 <button
                   aria-label="增加"
@@ -385,10 +386,10 @@ onBeforeUnmount(() => {
               <span v-if="!isUnlimitedQuantityDish(item.dish) && orderedByDish[item.dish.id]" class="ordered-badge">{{ orderedByDish[item.dish.id] }}已点</span>
               <span v-else>x{{ item.quantity }}</span>
             </div>
-            <van-field v-model="item.note" class="cart-field" label="单项备注" placeholder="少辣、不要香菜，可不填" />
+            <van-field v-model="item.note" class="cart-field" label="单项备注" placeholder="少辣、不放香菜，可不填" />
           </div>
           <div class="stepper compact">
-            <button @click="remove(item.dish); burstConfetti($event)">-</button>
+            <button :disabled="!canDecreaseDishQuantity(item.quantity)" @click="remove(item.dish); burstConfetti($event)">-</button>
             <strong>{{ item.quantity }}</strong>
             <button :disabled="(!isUnlimitedQuantityDish(item.dish) && Boolean(orderedByDish[item.dish.id])) || (!isUnlimitedQuantityDish(item.dish) && item.quantity >= 1)" @click="add(item.dish); burstConfetti($event)">+</button>
           </div>
@@ -398,7 +399,7 @@ onBeforeUnmount(() => {
             v-model="guestName"
             class="cart-field"
             label="昵称"
-            placeholder="例如：小王"
+            placeholder="例如：小欧"
             required
             clearable
             :error="guestNameMissing"
@@ -413,7 +414,6 @@ onBeforeUnmount(() => {
 
   <div v-else class="loading-page">正在加载菜单...</div>
 </template>
-
 <style scoped>
 .guest-shell {
   min-height: 100vh;
@@ -1076,3 +1076,4 @@ html::-webkit-scrollbar-thumb:hover,
   }
 }
 </style>
+

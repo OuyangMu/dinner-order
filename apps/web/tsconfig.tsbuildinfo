@@ -1,1 +1,1 @@
-{"root":["./src/api.ts","./src/env.d.ts","./src/main.ts","./src/app.vue","./src/pages/adminhome.vue","./src/pages/guestmenu.vue"],"version":"5.9.3"}
+{"root":["./src/api.ts","./src/env.d.ts","./src/guest-menu-stepper.test.ts","./src/guest-menu-stepper.ts","./src/main.ts","./src/app.vue","./src/pages/adminhome.vue","./src/pages/guestmenu.vue"],"version":"5.9.3"}

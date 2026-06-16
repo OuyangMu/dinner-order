@@ -3,6 +3,7 @@ import { showFailToast, showImagePreview, showSuccessToast } from "vant";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { request } from "../api";
+import { canDecreaseDishQuantity } from "../guest-menu-stepper";
 const route = useRoute();
 const code = computed(() => String(route.params.code));
 const loading = ref(true);
@@ -426,6 +427,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                         __VLS_ctx.remove(dish);
                         __VLS_ctx.burstConfetti($event);
                     } },
+                disabled: (!__VLS_ctx.canDecreaseDishQuantity(__VLS_ctx.cart[dish.id]?.quantity || 0)),
                 'aria-label': "减少",
             });
             __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
@@ -623,13 +625,13 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             modelValue: (item.note),
             ...{ class: "cart-field" },
             label: "单项备注",
-            placeholder: "少辣、不要香菜，可不填",
+            placeholder: "少辣、不放香菜，可不填",
         }));
         const __VLS_18 = __VLS_17({
             modelValue: (item.note),
             ...{ class: "cart-field" },
             label: "单项备注",
-            placeholder: "少辣、不要香菜，可不填",
+            placeholder: "少辣、不放香菜，可不填",
         }, ...__VLS_functionalComponentArgsRest(__VLS_17));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "stepper compact" },
@@ -641,6 +643,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                     __VLS_ctx.remove(item.dish);
                     __VLS_ctx.burstConfetti($event);
                 } },
+            disabled: (!__VLS_ctx.canDecreaseDishQuantity(item.quantity)),
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.quantity);
@@ -664,7 +667,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
         modelValue: (__VLS_ctx.guestName),
         ...{ class: "cart-field" },
         label: "昵称",
-        placeholder: "例如：小王",
+        placeholder: "例如：小欧",
         required: true,
         clearable: true,
         error: (__VLS_ctx.guestNameMissing),
@@ -674,7 +677,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
         modelValue: (__VLS_ctx.guestName),
         ...{ class: "cart-field" },
         label: "昵称",
-        placeholder: "例如：小王",
+        placeholder: "例如：小欧",
         required: true,
         clearable: true,
         error: (__VLS_ctx.guestNameMissing),
@@ -780,6 +783,7 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             ShoppingCart: ShoppingCart,
             ClipboardList: ClipboardList,
+            canDecreaseDishQuantity: canDecreaseDishQuantity,
             loading: loading,
             submitting: submitting,
             menu: menu,
