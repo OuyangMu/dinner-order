@@ -133,26 +133,50 @@ function parsePrepItems(prepItems: string) {
   }
 }
 
-function mapDish(dish: any) {
-  return { ...dish, tags: parseTags(dish.tags), prepItems: parsePrepItems(dish.prepItems) };
+function mapDish(dish: any, options?: { orderCountMap?: Map<string, number> }) {
+  return {
+    ...dish,
+    tags: parseTags(dish.tags),
+    prepItems: parsePrepItems(dish.prepItems),
+    orderCount: options?.orderCountMap?.get(dish.id) ?? dish.orderCount ?? 0
+  };
+}
+
+async function getDishOrderCountMap() {
+  const counts = await prisma.orderItem.groupBy({
+    by: ["dishId"],
+    where: {
+      order: {
+        status: { not: "CANCELED" }
+      }
+    },
+    _count: {
+      _all: true
+    }
+  });
+
+  return new Map(counts.map((item) => [item.dishId, item._count._all]));
 }
 
 async function eventMenu(code: string) {
-  const event = await prisma.event.findUnique({
-    where: { accessCode: code },
-    include: {
-      eventDishes: {
-        where: { enabled: true, dish: { enabled: true } },
-        include: { dish: { include: { category: true } } },
-        orderBy: [{ sortOrder: "asc" }]
+  const [event, orderCountMap] = await Promise.all([
+    prisma.event.findUnique({
+      where: { accessCode: code },
+      include: {
+        eventDishes: {
+          where: { enabled: true, dish: { enabled: true } },
+          include: { dish: { include: { category: true } } },
+          orderBy: [{ sortOrder: "asc" }]
+        }
       }
-    }
-  });
+    }),
+    getDishOrderCountMap()
+  ]);
 
   if (!event) return null;
 
   const dishes = event.eventDishes.map((item: any) => ({
-    ...mapDish(item.dish),
+    ...mapDish(item.dish, { orderCountMap }),
     eventDishId: item.id,
     stockLimit: item.stockLimit ?? item.dish.stockLimit
   }));
@@ -394,8 +418,11 @@ app.post("/api/admin/uploads/dish-image", async (c) => {
 });
 
 app.get("/api/admin/dishes", async (c) => {
-  const dishes = await prisma.dish.findMany({ include: { category: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] });
-  return c.json(dishes.map(mapDish));
+  const [dishes, orderCountMap] = await Promise.all([
+    prisma.dish.findMany({ include: { category: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
+    getDishOrderCountMap()
+  ]);
+  return c.json(dishes.map((dish) => mapDish(dish, { orderCountMap })));
 });
 
 app.post("/api/admin/dishes", async (c) => {

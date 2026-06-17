@@ -18,6 +18,7 @@ const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
 const deletingOrderId = ref("");
+const categoryRail = ref(null);
 let scrollLockTimer;
 let lockedScrollY = 0;
 const unlimitedQuantityCategories = new Set(["主食", "饮品"]);
@@ -125,6 +126,12 @@ function scrollToCategory(categoryId) {
 function syncActiveCategoryOnScroll() {
     if (scrollLockTimer || !menu.value?.categories.length)
         return;
+    const scrollBottom = window.scrollY + window.innerHeight;
+    const documentBottom = document.documentElement.scrollHeight;
+    if (documentBottom - scrollBottom <= 24) {
+        activeCategory.value = menu.value.categories.at(-1)?.id || activeCategory.value;
+        return;
+    }
     const anchors = menu.value.categories
         .map((category) => ({
         id: category.id,
@@ -135,6 +142,24 @@ function syncActiveCategoryOnScroll() {
         anchors.sort((a, b) => a.top - b.top)[0];
     if (current)
         activeCategory.value = current.id;
+}
+function scrollActiveCategoryIntoView(categoryId) {
+    const rail = categoryRail.value;
+    if (!rail)
+        return;
+    const activeButton = rail.querySelector(`button[data-category-id="${categoryId}"]`);
+    if (!activeButton)
+        return;
+    const railRect = rail.getBoundingClientRect();
+    const buttonRect = activeButton.getBoundingClientRect();
+    const railHasHorizontalOverflow = rail.scrollWidth > rail.clientWidth + 4;
+    if (!railHasHorizontalOverflow)
+        return;
+    const nextScrollLeft = rail.scrollLeft + (buttonRect.left - railRect.left) - railRect.width / 2 + buttonRect.width / 2;
+    rail.scrollTo({
+        left: Math.max(0, nextScrollLeft),
+        behavior: "smooth"
+    });
 }
 async function load() {
     loading.value = true;
@@ -239,6 +264,11 @@ watch(showCart, (visible) => {
         unlockPageScroll();
     }
 });
+watch(activeCategory, (categoryId) => {
+    if (!categoryId)
+        return;
+    requestAnimationFrame(() => scrollActiveCategoryIntoView(categoryId));
+});
 onBeforeUnmount(() => {
     window.removeEventListener("scroll", syncActiveCategoryOnScroll);
     window.clearTimeout(scrollLockTimer);
@@ -265,6 +295,10 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['event-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['muted']} */ ;
 /** @type {__VLS_StyleScopedClasses['content-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
+/** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-rail']} */ ;
@@ -352,9 +386,11 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
         ...{ class: "content-layout" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
+        ref: "categoryRail",
         ...{ class: "category-rail" },
         'aria-label': "菜品分类",
     });
+    /** @type {typeof __VLS_ctx.categoryRail} */ ;
     for (const [group] of __VLS_getVForSourceType((__VLS_ctx.groupedDishes))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
             ...{ onClick: (...[$event]) => {
@@ -363,6 +399,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                     __VLS_ctx.scrollToCategory(group.category.id);
                 } },
             key: (group.category.id),
+            'data-category-id': (group.category.id),
             ...{ class: ({ active: __VLS_ctx.activeCategory === group.category.id }) },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
@@ -869,6 +906,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             note: note,
             showCart: showCart,
             deletingOrderId: deletingOrderId,
+            categoryRail: categoryRail,
             isUnlimitedQuantityDish: isUnlimitedQuantityDish,
             cartItems: cartItems,
             cartCount: cartCount,

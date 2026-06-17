@@ -55,6 +55,12 @@ const passwordForm = reactive({
 });
 
 const activeEvent = computed(() => events.value.find((event) => event.id === activeEventId.value));
+const topOrderedDishes = computed(() =>
+  dishes.value
+    .filter((dish) => !["主食", "饮品"].includes(dish.category?.name || "") && dish.orderCount > 0)
+    .sort((a, b) => b.orderCount - a.orderCount || a.name.localeCompare(b.name, "zh-CN"))
+    .slice(0, 3)
+);
 const qrcodeOrigin = computed(() => {
   if (import.meta.env.VITE_PUBLIC_ORIGIN) return import.meta.env.VITE_PUBLIC_ORIGIN;
   if (["localhost", "127.0.0.1"].includes(location.hostname)) {
@@ -477,6 +483,23 @@ onMounted(loadAdmin);
           <span>已点份数</span>
           <strong>{{ summary.reduce((sum, item) => sum + item.quantity, 0) }}</strong>
         </article>
+        <article class="tool-section top-dishes-panel">
+          <div class="band-title">
+            <ChefHat :size="18" />
+            <h2>热门菜品 Top 3</h2>
+          </div>
+          <div v-if="topOrderedDishes.length" class="top-dishes-list">
+            <div v-for="(dish, index) in topOrderedDishes" :key="dish.id" class="top-dish-item">
+              <div class="top-dish-rank">{{ index + 1 }}</div>
+              <div class="top-dish-meta">
+                <strong>{{ dish.name }}</strong>
+                <span>{{ dish.category?.name }}</span>
+              </div>
+              <div class="top-dish-count">{{ dish.orderCount }} 次</div>
+            </div>
+          </div>
+          <p v-else class="muted">暂无可统计的点单数据</p>
+        </article>
         <article class="qr-panel">
           <div>
             <div class="band-title">
@@ -544,6 +567,7 @@ onMounted(loadAdmin);
             </template>
           </el-table-column>
           <el-table-column prop="servingHint" label="份量" min-width="120" />
+          <el-table-column prop="orderCount" label="点单次数" width="110" sortable />
           <el-table-column label="每份食材" min-width="220">
             <template #default="{ row }">
               <div class="items-text">
@@ -950,6 +974,54 @@ p {
   gap: 16px;
   align-items: center;
   padding: 18px;
+}
+
+.top-dishes-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.top-dishes-list {
+  display: grid;
+  gap: 10px;
+}
+
+.top-dish-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 4%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 7%);
+}
+
+.top-dish-rank {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgb(67 232 255 / 12%);
+  color: #f8fbff;
+  font-weight: 700;
+}
+
+.top-dish-meta {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.top-dish-meta strong {
+  color: #f8fbff;
+}
+
+.top-dish-meta span,
+.top-dish-count {
+  color: #9bb8c8;
+  font-size: 13px;
 }
 
 .qr-panel img {

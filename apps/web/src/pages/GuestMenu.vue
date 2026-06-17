@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router";
 import { request, type Dish, type MenuPayload, type Order, type SummaryItem } from "../api";
 import { canDecreaseDishQuantity } from "../guest-menu-stepper";
+import { getDishTopRankMap } from "../guest-menu-top-rank";
 
 const route = useRoute();
 const code = computed(() => String(route.params.code));
@@ -20,6 +21,7 @@ const guestToken = ref(localStorage.getItem("guestToken") || "");
 const note = ref("");
 const showCart = ref(false);
 const deletingOrderId = ref("");
+const categoryRail = ref<HTMLElement | null>(null);
 let scrollLockTimer: number | undefined;
 let lockedScrollY = 0;
 
@@ -50,6 +52,7 @@ const groupedDishes = computed(() => {
     dishes: menu.value!.dishes.filter((dish) => dish.categoryId === category.id)
   }));
 });
+const dishTopRankMap = computed(() => (menu.value ? getDishTopRankMap(menu.value.dishes) : {}));
 
 function add(dish: Dish) {
   if (!isUnlimitedQuantityDish(dish) && orderedByDish.value[dish.id]) {
@@ -141,6 +144,13 @@ function scrollToCategory(categoryId: string) {
 
 function syncActiveCategoryOnScroll() {
   if (scrollLockTimer || !menu.value?.categories.length) return;
+  const scrollBottom = window.scrollY + window.innerHeight;
+  const documentBottom = document.documentElement.scrollHeight;
+  if (documentBottom - scrollBottom <= 24) {
+    activeCategory.value = menu.value.categories.at(-1)?.id || activeCategory.value;
+    return;
+  }
+
   const anchors = menu.value.categories
     .map((category) => ({
       id: category.id,
@@ -153,6 +163,27 @@ function syncActiveCategoryOnScroll() {
     anchors.sort((a, b) => a.top - b.top)[0];
 
   if (current) activeCategory.value = current.id;
+}
+
+function scrollActiveCategoryIntoView(categoryId: string) {
+  const rail = categoryRail.value;
+  if (!rail) return;
+
+  const activeButton = rail.querySelector<HTMLElement>(`button[data-category-id="${categoryId}"]`);
+  if (!activeButton) return;
+
+  const railRect = rail.getBoundingClientRect();
+  const buttonRect = activeButton.getBoundingClientRect();
+  const railHasHorizontalOverflow = rail.scrollWidth > rail.clientWidth + 4;
+  if (!railHasHorizontalOverflow) return;
+
+  const nextScrollLeft =
+    rail.scrollLeft + (buttonRect.left - railRect.left) - railRect.width / 2 + buttonRect.width / 2;
+
+  rail.scrollTo({
+    left: Math.max(0, nextScrollLeft),
+    behavior: "smooth"
+  });
 }
 
 async function load() {
@@ -256,6 +287,11 @@ watch(showCart, (visible) => {
   }
 });
 
+watch(activeCategory, (categoryId) => {
+  if (!categoryId) return;
+  requestAnimationFrame(() => scrollActiveCategoryIntoView(categoryId));
+});
+
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", syncActiveCategoryOnScroll);
   window.clearTimeout(scrollLockTimer);
@@ -275,10 +311,11 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="content-layout">
-      <aside class="category-rail" aria-label="菜品分类">
+      <aside ref="categoryRail" class="category-rail" aria-label="菜品分类">
         <button
           v-for="group in groupedDishes"
           :key="group.category.id"
+          :data-category-id="group.category.id"
           :class="{ active: activeCategory === group.category.id }"
           @click="scrollToCategory(group.category.id)"
         >
@@ -291,6 +328,7 @@ onBeforeUnmount(() => {
           <template v-for="group in groupedDishes" :key="group.category.id">
             <h2 :id="categoryAnchorId(group.category.id)" class="category-anchor">{{ group.category.name }}</h2>
             <article v-for="dish in group.dishes" :key="dish.id" class="dish-row">
+              <span v-if="dishTopRankMap[dish.id]" class="top-rank-badge">TOP {{ dishTopRankMap[dish.id] }}</span>
               <button
                 v-if="dish.imageUrl"
                 type="button"
@@ -593,6 +631,26 @@ h1 {
   box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
   z-index: 40;
   isolation: isolate;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 18%) transparent;
+}
+
+.category-rail::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.category-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.category-rail::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 20%));
+}
+
+.category-rail::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, rgb(255 255 255 / 14%), rgb(255 255 255 / 28%));
 }
 
 .category-rail button {
@@ -655,6 +713,7 @@ h1 {
 }
 
 .dish-row {
+  position: relative;
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr) 116px;
   gap: 16px;
@@ -668,6 +727,23 @@ h1 {
 .dish-row:hover {
   transform: translateY(-1px);
   background: rgb(255 255 255 / 7%);
+}
+
+.top-rank-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(96 165 250 / 18%), rgb(255 255 255 / 7%));
+  border: 1px solid rgb(96 165 250 / 18%);
+  color: rgb(191 219 254 / 92%);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 18px rgb(0 0 0 / 18%);
 }
 
 .dish-image {

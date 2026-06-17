@@ -20,6 +20,7 @@ export type Dish = {
   enabled: boolean;
   stockLimit?: number;
   sortOrder: number;
+  orderCount: number;
 };
 
 export type PrepItem = {
