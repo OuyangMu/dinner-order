@@ -851,14 +851,19 @@ h1 {
 
 .ordered-badge {
   max-width: 110px;
-  padding: 4px 8px;
+  min-height: 32px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgb(255 255 255 / 7%);
   color: rgb(255 255 255 / 60%);
   font-size: 11px;
   line-height: 1.35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   overflow-wrap: anywhere;
+  box-sizing: border-box;
 }
 
 .action-ordered-badge {
