@@ -328,7 +328,6 @@ onBeforeUnmount(() => {
           <template v-for="group in groupedDishes" :key="group.category.id">
             <h2 :id="categoryAnchorId(group.category.id)" class="category-anchor">{{ group.category.name }}</h2>
             <article v-for="dish in group.dishes" :key="dish.id" class="dish-row">
-              <span v-if="dishTopRankMap[dish.id]" class="top-rank-badge">TOP {{ dishTopRankMap[dish.id] }}</span>
               <button
                 v-if="dish.imageUrl"
                 type="button"
@@ -360,7 +359,10 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="dish-action">
-                <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
+                <div v-if="dishTopRankMap[dish.id] || (!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id])" class="dish-badge-stack">
+                  <span v-if="dishTopRankMap[dish.id]" class="top-rank-badge">TOP {{ dishTopRankMap[dish.id] }}</span>
+                  <span v-if="!isUnlimitedQuantityDish(dish) && orderedByDish[dish.id]" class="ordered-badge">{{ orderedByDish[dish.id] }}已点</span>
+                </div>
                 <div class="stepper">
                   <button
                     :disabled="!canDecreaseDishQuantity(cart[dish.id]?.quantity || 0)"
@@ -713,7 +715,6 @@ h1 {
 }
 
 .dish-row {
-  position: relative;
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr) 116px;
   gap: 16px;
@@ -729,11 +730,14 @@ h1 {
   background: rgb(255 255 255 / 7%);
 }
 
+.dish-badge-stack {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  width: 100%;
+}
+
 .top-rank-badge {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 1;
   padding: 5px 9px;
   border-radius: 999px;
   background: linear-gradient(135deg, rgb(96 165 250 / 18%), rgb(255 255 255 / 7%));
@@ -842,6 +846,7 @@ h1 {
   display: grid;
   justify-items: end;
   gap: 10px;
+  align-content: center;
 }
 
 .ordered-badge {
