@@ -2,6 +2,7 @@
 import { CalendarPlus, ChefHat, ClipboardList, KeyRound, LayoutDashboard, LogIn, LogOut, QrCode, RefreshCw, Soup } from "lucide-vue-next";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
+import { shouldApplyUploadResult } from "../admin-home-image-upload";
 import { request, type Category, type Dish, type EventInfo, type IngredientSummaryItem, type Order, type PrepItem, type SummaryItem } from "../api";
 
 const adminToken = ref(localStorage.getItem("adminToken") || "");
@@ -27,6 +28,7 @@ const editingEventId = ref("");
 const copyTargetEventId = ref("");
 const imageInput = ref<HTMLInputElement | null>(null);
 const imageUploading = ref(false);
+const dishImageSessionId = ref(0);
 const dishForm = reactive({
   name: "",
   categoryId: "",
@@ -117,6 +119,7 @@ async function loadEventData() {
 }
 
 function openDish(dish?: Dish) {
+  dishImageSessionId.value += 1;
   editingDishId.value = dish?.id || "";
   Object.assign(dishForm, {
     name: dish?.name || "",
@@ -271,6 +274,7 @@ async function uploadDishImage(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
+  const uploadSessionId = dishImageSessionId.value;
 
   imageUploading.value = true;
   try {
@@ -280,6 +284,7 @@ async function uploadDishImage(event: Event) {
       method: "POST",
       body: formData
     });
+    if (!shouldApplyUploadResult(uploadSessionId, dishImageSessionId.value)) return;
     dishForm.imageUrl = result.url;
     ElMessage.success("图片已上传");
   } catch (error) {
