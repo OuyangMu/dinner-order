@@ -8,8 +8,10 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "@hono/node-server/serve-static";
 import QRCode from "qrcode";
+import sharp from "sharp";
 import { z } from "zod";
 import { canGuestDeleteOwnOrder } from "./order-permissions.js";
+import { buildDishImagePayload, buildStoredDishImageUrls } from "./dish-image.js";
 
 const prisma = new PrismaClient();
 const app = new Hono<{ Variables: { admin: AdminPayload } }>();
@@ -32,6 +34,10 @@ type AdminPayload = {
 };
 
 app.use("*", cors({ origin: ["http://localhost:5173", "http://127.0.0.1:5173"], credentials: true }));
+app.use("/uploads/*", async (c, next) => {
+  c.header("Cache-Control", "public, max-age=31536000, immutable");
+  await next();
+});
 app.use("/uploads/*", serveStatic({ root: workspaceRoot }));
 
 const orderSchema = z.object({
@@ -134,8 +140,10 @@ function parsePrepItems(prepItems: string) {
 }
 
 function mapDish(dish: any, options?: { orderCountMap?: Map<string, number> }) {
+  const imagePayload = buildDishImagePayload(dish.imageUrl);
   return {
     ...dish,
+    ...imagePayload,
     tags: parseTags(dish.tags),
     prepItems: parsePrepItems(dish.prepItems),
     orderCount: options?.orderCountMap?.get(dish.id) ?? dish.orderCount ?? 0
@@ -410,11 +418,25 @@ app.post("/api/admin/uploads/dish-image", async (c) => {
   }
 
   await mkdir(dishUploadDir, { recursive: true });
-  const filename = `${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
-  const filepath = join(dishUploadDir, filename);
-  await writeFile(filepath, Buffer.from(await file.arrayBuffer()));
+  const fileKey = `${Date.now()}-${randomBytes(8).toString("hex")}`;
+  const { imageUrl, thumbnailUrl } = buildStoredDishImageUrls(fileKey);
+  const fullPath = join(dishUploadDir, `${fileKey}-full.webp`);
+  const thumbnailPath = join(dishUploadDir, `${fileKey}-thumb.webp`);
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
 
-  return c.json({ url: `/uploads/dishes/${filename}` });
+  await sharp(inputBuffer)
+    .rotate()
+    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toFile(fullPath);
+
+  await sharp(inputBuffer)
+    .rotate()
+    .resize({ width: 240, height: 240, fit: "cover", position: "centre" })
+    .webp({ quality: 74 })
+    .toFile(thumbnailPath);
+
+  return c.json({ url: imageUrl, thumbnailUrl });
 });
 
 app.get("/api/admin/dishes", async (c) => {

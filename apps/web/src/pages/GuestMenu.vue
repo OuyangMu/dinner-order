@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
                 :aria-label="`查看${dish.name}大图`"
                 @click="previewDishImage(dish)"
               >
-                <img :src="dish.imageUrl" :alt="dish.name" />
+                <img :src="dish.thumbnailUrl || dish.imageUrl" :alt="dish.name" loading="lazy" decoding="async" />
               </button>
               <div v-else class="dish-image dish-image-placeholder" aria-hidden="true"></div>
 

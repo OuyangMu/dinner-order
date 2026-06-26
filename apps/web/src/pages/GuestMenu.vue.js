@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router";
 import { request } from "../api";
 import { canDecreaseDishQuantity } from "../guest-menu-stepper";
+import { getDishTopRankMap } from "../guest-menu-top-rank";
 const route = useRoute();
 const code = computed(() => String(route.params.code));
 const loading = ref(true);
@@ -42,6 +43,7 @@ const groupedDishes = computed(() => {
         dishes: menu.value.dishes.filter((dish) => dish.categoryId === category.id)
     }));
 });
+const dishTopRankMap = computed(() => (menu.value ? getDishTopRankMap(menu.value.dishes) : {}));
 function add(dish) {
     if (!isUnlimitedQuantityDish(dish) && orderedByDish.value[dish.id]) {
         showFailToast(`${dish.name}${orderedByDish.value[dish.id]}已点`);
@@ -348,6 +350,9 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
+/** @type {__VLS_StyleScopedClasses['top-rank-badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['dish-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['action-ordered-badge']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['compact']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
@@ -423,6 +428,12 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                 key: (dish.id),
                 ...{ class: "dish-row" },
             });
+            if (__VLS_ctx.dishTopRankMap[dish.id]) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                    ...{ class: "top-rank-badge" },
+                });
+                (__VLS_ctx.dishTopRankMap[dish.id]);
+            }
             if (dish.imageUrl) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
                     ...{ onClick: (...[$event]) => {
@@ -437,8 +448,10 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
                     'aria-label': (`查看${dish.name}大图`),
                 });
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.img)({
-                    src: (dish.imageUrl),
+                    src: (dish.thumbnailUrl || dish.imageUrl),
                     alt: (dish.name),
+                    loading: "lazy",
+                    decoding: "async",
                 });
             }
             else {
@@ -499,7 +512,7 @@ if (!__VLS_ctx.loading && __VLS_ctx.menu) {
             });
             if (!__VLS_ctx.isUnlimitedQuantityDish(dish) && __VLS_ctx.orderedByDish[dish.id]) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-                    ...{ class: "ordered-badge" },
+                    ...{ class: "ordered-badge action-ordered-badge" },
                 });
                 (__VLS_ctx.orderedByDish[dish.id]);
             }
@@ -838,6 +851,7 @@ else {
 /** @type {__VLS_StyleScopedClasses['dish-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['category-anchor']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['top-rank-badge']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
 /** @type {__VLS_StyleScopedClasses['image-button']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-image']} */ ;
@@ -852,6 +866,7 @@ else {
 /** @type {__VLS_StyleScopedClasses['tag-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['dish-action']} */ ;
 /** @type {__VLS_StyleScopedClasses['ordered-badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['action-ordered-badge']} */ ;
 /** @type {__VLS_StyleScopedClasses['stepper']} */ ;
 /** @type {__VLS_StyleScopedClasses['summary-band']} */ ;
 /** @type {__VLS_StyleScopedClasses['band-title']} */ ;
@@ -914,6 +929,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             orderedByDish: orderedByDish,
             canSubmit: canSubmit,
             groupedDishes: groupedDishes,
+            dishTopRankMap: dishTopRankMap,
             add: add,
             remove: remove,
             previewDishImage: previewDishImage,

@@ -13,6 +13,7 @@ export type Dish = {
   categoryId: string;
   category: Category;
   imageUrl?: string;
+  thumbnailUrl?: string | null;
   description?: string;
   tags: string[];
   prepItems: PrepItem[];
